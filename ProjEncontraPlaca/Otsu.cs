@@ -100,24 +100,48 @@ namespace ProjEncontraPlaca
             return t;
         }
 
-        public void Convert2GrayScaleFast(Bitmap bmp)
+        public void ConvertToGrayDMA(Bitmap imageBitmap)
         {
-            BitmapData bmData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
-                    ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+            int width = imageBitmap.Width;
+            int height = imageBitmap.Height;
+            int pixelSize = 3;
+            int gs;
+
+            // Bloqueia os dados do bitmap
+            BitmapData bitmapData = imageBitmap.LockBits(new Rectangle(0, 0, width, height),
+                ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+
+            int padding = bitmapData.Stride - (width * pixelSize);
+
             unsafe
             {
-                byte* p = (byte*)(void*)bmData.Scan0.ToPointer();
-                int stopAddress = (int)p + bmData.Stride * bmData.Height;
-                while ((int)p != stopAddress)
+                byte* ptr = (byte*)bitmapData.Scan0.ToPointer();
+
+                int r, g, b;
+                for (int y = 0; y < height; y++)
                 {
-                    p[0] = (byte)(.299 * p[2] + .587 * p[1] + .114 * p[0]);
-                    p[1] = p[0];
-                    p[2] = p[0];
-                    p += 3;
+                    for (int x = 0; x < width; x++)
+                    {
+                        b = *(ptr);     // está armazenado dessa forma: b g r 
+                        g = *(ptr + 1);
+                        r = *(ptr + 2);
+
+                        // Calcula o tom de cinza
+                        gs = (int)(r * 0.2990 + g * 0.5870 + b * 0.1140);
+
+                        // Define o mesmo valor para os três canais
+                        *(ptr++) = (byte)gs;
+                        *(ptr++) = (byte)gs;
+                        *(ptr++) = (byte)gs;
+                    }
+                    ptr += padding;
                 }
             }
-            bmp.UnlockBits(bmData);
+
+            // Desbloqueia os dados do bitmap
+            imageBitmap.UnlockBits(bitmapData);
         }
+
 
         public void threshold(Bitmap bmp, int thresh)
         { 

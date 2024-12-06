@@ -41,7 +41,7 @@ namespace ProjEncontraPlaca
         private void btnOTSU_Click(object sender, EventArgs e)
         {
             Bitmap temp = (Bitmap)image.Clone();
-            otsu.Convert2GrayScaleFast(temp);
+            otsu.ConvertToGrayDMA(temp);
             int otsuThreshold = otsu.getOtsuThreshold((Bitmap)temp);
             otsu.threshold(temp, otsuThreshold);
             textBox1.Text = otsuThreshold.ToString();

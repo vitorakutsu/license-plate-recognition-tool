@@ -4,6 +4,8 @@ using System.Text;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
+using System.Windows.Forms;
 
 namespace ProjEncontraPlaca
 {
@@ -155,50 +157,169 @@ namespace ProjEncontraPlaca
                 imageBitmapDest.SetPixel(maior.X, y, cor);
             }
         }
-
-
-        //----------------
+        
         public static void encontra_placa(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
         {
             List<Point> listaPini = new List<Point>();
             List<Point> listaPfim = new List<Point>();
+            List<Point> listaPontosInicialDivisaoImagem = new List<Point>();
+            List<Point> listaPontosFinalDivisaoImagem = new List<Point>();
+
+            int cont = 0;
+            int tentativas = 1;
+            int qtdLinhasDivisao = 3;
 
             Otsu otsu = new Otsu();
 
-            otsu.Convert2GrayScaleFast(imageBitmapDest);
-            int otsuThreshold = otsu.getOtsuThreshold((Bitmap)imageBitmapDest);
+            // Convertendo a imagem para escala de cinza e aplicando o limiar de Otsu
+            otsu.ConvertToGrayDMA(imageBitmapDest);
+            int otsuThreshold = otsu.getOtsuThreshold(imageBitmapDest);
             otsu.threshold(imageBitmapDest, otsuThreshold);
 
-
-            Bitmap imageBitmap = (Bitmap)imageBitmapDest.Clone();
-            Filtros.segmentar8conectado(imageBitmap, imageBitmapDest, listaPini, listaPfim);
-            //pictBoxImg.Image = imgDest;
-
-
-            //
-            int altura, largura;
-            List<Point> _listaPini = new List<Point>();
-            List<Point> _listaPfim = new List<Point>();
-            for (int i = 0; i < listaPini.Count; i++)
+            // Loop principal para encontrar a placa
+            while (cont != 7 && tentativas < 8)
             {
-                altura = listaPfim[i].Y - listaPini[i].Y;
-                largura = listaPfim[i].X - listaPini[i].X;
+                Bitmap imageBitmap = (Bitmap)imageBitmapDest.Clone();
+                Filtros.segmentar8conectado(imageBitmap, imageBitmapDest, listaPini, listaPfim);
 
-                if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                int altura, largura;
+                List<Point> _listaPini = new List<Point>();
+                List<Point> _listaPfim = new List<Point>();
+
+                // Verificando retângulos que podem corresponder aos dígitos da placa
+                for (int i = 0; i < listaPini.Count; i++)
                 {
-                    _listaPini.Add(listaPini[i]);
-                    _listaPfim.Add(listaPfim[i]);
-                    Filtros.desenhaRetangulo(imageBitmapDest, listaPini[i], listaPfim[i], Color.FromArgb(0, 255, 0));
+                    altura = listaPfim[i].Y - listaPini[i].Y;
+                    largura = listaPfim[i].X - listaPini[i].X;
+
+                    if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                    {
+                        _listaPini.Add(listaPini[i]);
+                        _listaPfim.Add(listaPfim[i]);
+                        Filtros.desenhaRetangulo(imageBitmapDest, listaPini[i], listaPfim[i], Color.Green);
+                        cont++;
+                    }
                 }
 
+                // Se não detectou todos os dígitos
+                if (cont != 7)
+                {
+                    if (cont > 1 && _listaPini.Count > 0 && _listaPfim.Count > 0)
+                    {
+                        // Define os pontos inicial e final da região
+                        Point pontoInicial = new Point(0, _listaPini[0].Y - 10);
+                        Point pontoFinal = new Point(imageBitmapDest.Width - 1, _listaPfim[_listaPfim.Count - 1].Y);
+
+                        // Validar dimensões do retângulo
+                        int x = Math.Max(0, pontoInicial.X);
+                        int y = Math.Max(0, pontoInicial.Y);
+                        int width = Math.Min(imageBitmapSrc.Width - x, pontoFinal.X - pontoInicial.X + 1);
+                        int height = Math.Min(imageBitmapSrc.Height - y, pontoFinal.Y - pontoInicial.Y + 1);
+
+                        if (width > 0 && height > 0)
+                        {
+                            try
+                            {
+                                Rectangle region = new Rectangle(x, y, width, height);
+                                Bitmap placaRegiao = imageBitmapSrc.Clone(region, imageBitmapSrc.PixelFormat);
+                                Bitmap placaRegiaoClone = (Bitmap)placaRegiao.Clone();
+
+                                // Aplica o limiar de Otsu na subimagem
+                                otsu.ConvertToGrayDMA(placaRegiao);
+                                otsuThreshold = otsu.getOtsuThreshold(placaRegiao);
+                                otsu.threshold(placaRegiao, otsuThreshold);
+
+                                listaPini.Clear();
+                                listaPfim.Clear();
+
+                                Filtros.segmentar8conectado(placaRegiao, placaRegiaoClone, listaPini, listaPfim);
+
+                                using (Graphics g = Graphics.FromImage(imageBitmapDest))
+                                {
+                                    g.DrawImage(placaRegiaoClone, region);
+                                }
+
+                                // Liberar memória
+                                placaRegiao.Dispose();
+                                placaRegiaoClone.Dispose();
+                            }
+                            catch (OutOfMemoryException ex)
+                            {
+                                Console.WriteLine("Erro de memória ao clonar a região: " + ex.Message);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Dimensões inválidas para o retângulo da placa.");
+                        }
+                    }
+                    else
+                    {
+                        // Dividir a imagem em mais partes para tentar localizar a placa
+                        if (tentativas == 1)
+                        {
+                            DividirImagemEmEspacosIguais(imageBitmapDest, imageBitmapDest.Height / qtdLinhasDivisao, listaPontosInicialDivisaoImagem, listaPontosFinalDivisaoImagem);
+                    
+                            listaPini = listaPontosInicialDivisaoImagem;
+                            listaPfim = listaPontosFinalDivisaoImagem;
+                        }
+                        else
+                        {
+                            qtdLinhasDivisao++;
+                            DividirImagemEmEspacosIguais(imageBitmapDest, imageBitmapDest.Height / qtdLinhasDivisao, listaPontosInicialDivisaoImagem, listaPontosFinalDivisaoImagem);
+                    
+                            listaPini = listaPontosInicialDivisaoImagem;
+                            listaPfim = listaPontosFinalDivisaoImagem;
+                        }
+                    }
+                }
+
+                imageBitmap.Dispose();
+                tentativas++;
+            }
+
+            // Exibir mensagem caso não encontre os 7 dígitos
+            if (cont != 7)
+            {
+                Console.WriteLine("Não foi possível identificar todos os dígitos da placa.");
             }
         }
 
-        //-----
 
-      
+        public static void DividirImagemEmEspacosIguais(Bitmap imageBitmap, int espacosEntreLinhas, List<Point> listaPontosInicial, List<Point> listaPontosFinal)
+        {
+            listaPontosFinal.Clear();
+            listaPontosInicial.Clear();
+            
+            int alturaImagem = imageBitmap.Height;
+            int larguraImagem = imageBitmap.Width;
+            
+            int qtdDivisoes = alturaImagem / espacosEntreLinhas;
+            
+            for (int i = 0; i < qtdDivisoes; i++)
+            {
+                Point pontoInicial = new Point(0, i * espacosEntreLinhas);
+                
+                Point pontoFinal = new Point(larguraImagem, (i + 1) * espacosEntreLinhas);
+                
+                if (i == qtdDivisoes - 1 && pontoFinal.Y > alturaImagem)
+                {
+                    pontoFinal.Y = alturaImagem;
+                }
+                
+                listaPontosInicial.Add(pontoInicial);
+                listaPontosFinal.Add(pontoFinal);
+            }
+            
+            if (alturaImagem % espacosEntreLinhas != 0)
+            {
+                Point pontoInicialExtra = new Point(0, qtdDivisoes * espacosEntreLinhas);
+                Point pontoFinalExtra = new Point(larguraImagem, alturaImagem);
 
-
+                listaPontosInicial.Add(pontoInicialExtra);
+                listaPontosFinal.Add(pontoFinalExtra);
+            }
+        }
 
 
         //sem acesso direto a memoria
@@ -231,35 +352,6 @@ namespace ProjEncontraPlaca
                 }
             }
         }
-
-
-       /* public static void contorna_branco(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
-        {
-            int width = imageBitmapSrc.Width;
-            int height = imageBitmapSrc.Height;
-            int r, g, b;
-            Int32 gs;
-
-            Color newcolor = Color.FromArgb(255, 255, 255);
-            for (int y = 0; y < height; y++)
-            {
-                for (int col = 0; col < 2; col++)
-                {
-                    imageBitmapDest.SetPixel(col, y, newcolor);
-                    imageBitmapDest.SetPixel(width - 1 - col, y, newcolor);
-                }
-            }
-
-            for (int x = 0; x < width; x++)
-            {
-                for (int lin = 0; lin < 2; lin++)
-                {
-                    imageBitmapDest.SetPixel(x, lin, newcolor);
-                    imageBitmapDest.SetPixel(x, height - 1 - lin, newcolor);
-                }
-            }
-        }*/
-
 
         public static void countour(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
         {
@@ -424,10 +516,6 @@ namespace ProjEncontraPlaca
             }
         }
 
-
-
-
-
         public static void brancoPreto(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
         {
             int width = imageBitmapSrc.Width;
@@ -458,263 +546,5 @@ namespace ProjEncontraPlaca
                 }
             }
         }
-
-
-
-/*
-        public static void afinamento(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
-        {
-            brancoPreto(imageBitmapSrc, imageBitmapSrc);
-            int width = imageBitmapSrc.Width;
-            int height = imageBitmapSrc.Height;
-            int r, g, b;
-            int conectividade, vizinhos;
-            bool continuar = true;
-            List<List<int>> iteracao = new List<List<int>>();
-            List<Tuple<int, int>> pontosDel = new List<Tuple<int, int>>();
-
-            // percorrer imagem
-            for (int y = 0; y < height; y++)
-            {
-
-                iteracao.Add(new List<int>());
-
-                for (int x = 0; x < width; x++)
-                {
-                    Color cor = imageBitmapSrc.GetPixel(x, y);
-                    if (cor.R == 255)
-                        iteracao[y].Add(0);
-                    else if (cor.R == 0)
-                        iteracao[y].Add(1);
-                }
-            }
-
-            while (continuar)
-            {
-                continuar = false;
-                // primeira sub iteracao
-                for (int y = 1; y < height - 1; y++)
-                {
-                    for (int x = 1; x < width - 1; x++)
-                    {
-                        vizinhos = 0;
-                        conectividade = 0;
-                        if (iteracao[y][x] != 0)
-                        {
-                            conectividade += (iteracao[y - 1][x] == 0 && iteracao[y - 1][x + 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y - 1][x + 1] == 0 && iteracao[y][x + 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y][x + 1] == 0 && iteracao[y + 1][x + 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y + 1][x + 1] == 0 && iteracao[y + 1][x] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y + 1][x] == 0 && iteracao[y + 1][x - 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y + 1][x - 1] == 0 && iteracao[y][x - 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y][x - 1] == 0 && iteracao[y - 1][x - 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y - 1][x - 1] == 0 && iteracao[y - 1][x] == 1) ? 1 : 0;
-                            if (conectividade == 1)
-                            {
-                                vizinhos = iteracao[y - 1][x] + iteracao[y - 1][x + 1] + iteracao[y][x + 1] + iteracao[y + 1][x + 1] + iteracao[y + 1][x]
-                                    + iteracao[y + 1][x - 1] + iteracao[y][x - 1] + iteracao[y - 1][x - 1];
-
-                                if (vizinhos > 2 && vizinhos < 6)
-                                {
-                                    vizinhos = 0;
-                                    vizinhos = iteracao[y - 1][x] * iteracao[y][x + 1] * iteracao[y][x - 1];
-
-                                    if (vizinhos == 0)
-                                    {
-                                        vizinhos = 0;
-                                        vizinhos = iteracao[y - 1][x] * iteracao[y + 1][x] * iteracao[y][x - 1];
-
-                                        if (vizinhos == 0)
-                                        {
-                                            continuar = true;
-                                            pontosDel.Add(Tuple.Create(x, y));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                for (int i = 0; i < pontosDel.Count; i++)
-                    iteracao[pontosDel[i].Item2][pontosDel[i].Item1] = 0;
-                pontosDel.Clear();
-
-                //segunda sub iteracao
-                for (int y = 1; y < height - 1; y++)
-                {
-                    for (int x = 1; x < width - 1; x++)
-                    {
-                        vizinhos = 0;
-                        conectividade = 0;
-                        if (iteracao[y][x] != 0)
-                        {
-                            conectividade += (iteracao[y - 1][x] == 0 && iteracao[y - 1][x + 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y - 1][x + 1] == 0 && iteracao[y][x + 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y][x + 1] == 0 && iteracao[y + 1][x + 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y + 1][x + 1] == 0 && iteracao[y + 1][x] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y + 1][x] == 0 && iteracao[y + 1][x - 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y + 1][x - 1] == 0 && iteracao[y][x - 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y][x - 1] == 0 && iteracao[y - 1][x - 1] == 1) ? 1 : 0;
-                            conectividade += (iteracao[y - 1][x - 1] == 0 && iteracao[y - 1][x] == 1) ? 1 : 0;
-                            if (conectividade == 1)
-                            {
-                                vizinhos = iteracao[y - 1][x] + iteracao[y - 1][x + 1] + iteracao[y][x + 1] + iteracao[y + 1][x + 1] + iteracao[y + 1][x]
-                                    + iteracao[y + 1][x - 1] + iteracao[y][x - 1] + iteracao[y - 1][x - 1];
-
-                                if (vizinhos > 2 && vizinhos < 6)
-                                {
-                                    vizinhos = 0;
-                                    vizinhos = iteracao[y - 1][x] * iteracao[y][x + 1] * iteracao[y + 1][x];
-
-                                    if (vizinhos == 0)
-                                    {
-                                        vizinhos = 0;
-                                        vizinhos = iteracao[y][x + 1] * iteracao[y + 1][x] * iteracao[y][x - 1];
-
-                                        if (vizinhos == 0)
-                                        {
-                                            continuar = true;
-                                            pontosDel.Add(Tuple.Create(x, y));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                for (int i = 0; i < pontosDel.Count; i++)
-                    iteracao[pontosDel[i].Item2][pontosDel[i].Item1] = 0;
-                pontosDel.Clear();
-            }
-
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    if (iteracao[y][x] == 0)
-                        imageBitmapDest.SetPixel(x, y, Color.FromArgb(255, 255, 255));
-                    else
-                        imageBitmapDest.SetPixel(x, y, Color.FromArgb(0, 0, 0));
-                }
-
-            }
-        }
-
-        public static void contorno(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
-        {
-            List<Point> listaPini = new List<Point>();
-            List<Point> listaPfim = new List<Point>();
-            int width = imageBitmapSrc.Width;
-            int height = imageBitmapSrc.Height;
-            int x, y, x2, y2, aux_cR, me_x, ma_x, me_y, ma_y;
-            bool flag;
-
-            Color corB = Color.FromArgb(255, 255, 255);
-            for (y = 0; y < height; y++)
-                for (x = 0; x < width; x++)
-                    imageBitmapDest.SetPixel(x, y, corB);
-
-            for (y = 1; y < height; y+=2)
-            {
-                for (x = 0; x < width - 1; x++)
-                {
-                    //obtendo a cor do pixel
-                    Color cor = imageBitmapSrc.GetPixel(x, y);
-                    Color cor2 = imageBitmapSrc.GetPixel(x + 1, y);
-                    if (cor.R == 255 && cor2.R == 0 && imageBitmapDest.GetPixel(x + 1, y).R == 255)
-                    {
-                        me_x = ma_x = x2 = x;
-                        me_y = ma_y = y2 = y;
-                        do
-                        {
-                            Color p0, p1, p2, p3, p4, p5, p6, p7;
-                            imageBitmapDest.SetPixel(x2, y2, Color.FromArgb(0, 0, 0));
-
-                            p0 = imageBitmapSrc.GetPixel(x2 + 1, y2);
-                            p1 = imageBitmapSrc.GetPixel(x2 + 1, y2 - 1);
-                            p2 = imageBitmapSrc.GetPixel(x2, y2 - 1);
-                            p3 = imageBitmapSrc.GetPixel(x2 - 1, y2 - 1);
-                            p4 = imageBitmapSrc.GetPixel(x2 - 1, y2);
-                            p5 = imageBitmapSrc.GetPixel(x2 - 1, y2 + 1);
-                            p6 = imageBitmapSrc.GetPixel(x2, y2 + 1);
-                            p7 = imageBitmapSrc.GetPixel(x2 + 1, y2 + 1);
-
-                            if (p1.R == 255 && p0.R == 255 && p2.R == 0)
-                            {
-                                x2 = x2 + 1;
-                                y2 = y2 - 1;
-                            }
-                            else
-                             if (p3.R == 255 && p4.R == 0 && p2.R == 255)
-                            {
-                                x2 = x2 - 1;
-                                y2 = y2 - 1;
-                            }
-                            else
-                             if (p5.R == 255 && p4.R == 255 && p6.R == 0)
-                            {
-                                x2 = x2 - 1;
-                                y2 = y2 + 1;
-                            }
-                            else
-                            if (p7.R == 255 && p6.R == 255 && p0.R == 0)
-                            {
-                                x2 = x2 + 1;
-                                y2 = y2 + 1;
-                            }
-                            else
-                            if (p0.R == 255 && p2.R == 0 && p1.R == 0)
-                            {
-                                x2 = x2 + 1;
-                            }
-                            else
-                            if (p0.R == 255 && p2.R == 0 && p1.R == 0)
-                                x2 = x2 + 1;
-                            else
-                            if (p2.R == 255 && p4.R == 0 && p3.R == 0)
-                            {
-                                y2 = y2 - 1;
-                            }
-                            else
-                            if (p2.R == 255 && p4.R == 0 && p3.R == 0)
-                                y2 = y2 - 1;
-                            else
-                            if (p4.R == 255 && p5.R == 0 && p6.R == 0)
-                            {
-                                x2 = x2 - 1;
-                            }
-                            else
-                            if (p4.R == 255 && p5.R == 0 && p6.R == 0)
-                                x2 = x2 - 1;
-                            else
-                            if (p6.R == 255 && p0.R == 0 && p7.R == 0)
-                            {
-                                y2 = y2 + 1;
-                            }
-                            else
-                            if (p6.R == 255 && p0.R == 0 && p7.R == 0)
-                                y2 = y2 + 1;
-
-
-                            //menor e maior
-                            if (x2 < me_x)
-                                me_x = x2;
-                            if (y2 < me_y)
-                                me_y = y2;
-                            if (x2 > ma_x)
-                                ma_x = x2;
-                            if (y2 > ma_y)
-                                ma_y = y2;
-
-                        }
-                        while (x != x2 || y != y2);
-
-                        //desenha retângulo mínimo
-                        desenhaRetangulo(imageBitmapDest, new Point(me_x, me_y), new Point(ma_x, ma_y), Color.FromArgb(255, 0, 0));
-                    }
-                }
-            }
-        }*/
     }
 }

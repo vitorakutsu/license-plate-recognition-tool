@@ -28,3 +28,13 @@ C:\Users\VITOR\Desktop\ProjEncontraPlaca\ProjEncontraPlaca\obj\Debug\ProjEncontr
 C:\Users\VITOR\Desktop\ProjEncontraPlaca\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.csproj.CoreCompileInputs.cache
 C:\Users\VITOR\Desktop\ProjEncontraPlaca\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.exe
 C:\Users\VITOR\Desktop\ProjEncontraPlaca\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.pdb
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.csproj.AssemblyReference.cache
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.exe
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.pdb
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\bin\Debug\ProjEncontraPlaca.exe.config
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\bin\Debug\ProjEncontraPlaca.exe
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\bin\Debug\ProjEncontraPlaca.pdb
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.frmPrincipal.resources
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.Properties.Resources.resources
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.csproj.GenerateResource.cache
+C:\Users\Pedro Filitto\Desktop\license-plate-recognition-tool\ProjEncontraPlaca\obj\Debug\ProjEncontraPlaca.csproj.CoreCompileInputs.cache
