@@ -62,17 +62,13 @@ namespace ProjEncontraPlaca
             ClassificacaoCaracteres cl_numeros = new ClassificacaoCaracteres(30, 40, 1, 'S');
             ClassificacaoCaracteres cl_letras = new ClassificacaoCaracteres(30, 40, 2, 'S');
 
-
-
-            //testando o reconhecimento dos caracteres
+            
             Image img = Image.FromFile(@"..\..\..\H.png");
             Bitmap img_dig = new Bitmap(img.Width, img.Height);
             Filtros.threshold((Bitmap)img, img_dig);
 
             String transicao = cl_letras.retornaTransicaoHorizontal(img_dig);
             Console.WriteLine(cl_letras.reconheceCaractereTransicao_2pixels(transicao));
-
-
 
             //testando o reconhecimento dos numeros
             img = Image.FromFile(@"..\..\..\7.png");

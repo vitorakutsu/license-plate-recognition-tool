@@ -164,11 +164,16 @@ namespace ProjEncontraPlaca
             List<Point> listaPfim = new List<Point>();
             List<Point> listaPontosInicialDivisaoImagem = new List<Point>();
             List<Point> listaPontosFinalDivisaoImagem = new List<Point>();
+            List<Point> listaPontosInicioParaFiltrar = new List<Point>();
+            List<Point> listaPontosFinalParaFiltrar = new List<Point>();
+            List<Point> _listaPini = new List<Point>();
+            List<Point> _listaPfim = new List<Point>();
+            List<Point> subListaPini = new List<Point>();
+            List<Point> subListaPfim = new List<Point>();
 
-            int cont = 0;
-            int tentativas = 1;
-            int qtdLinhasDivisao = 3;
-
+            int cont = 0, altura, largura, qtdLinhasDivisao = 3, tentativas = 0;
+            bool primeiraIteracao = true;
+            
             Otsu otsu = new Otsu();
 
             // Convertendo a imagem para escala de cinza e aplicando o limiar de Otsu
@@ -177,112 +182,211 @@ namespace ProjEncontraPlaca
             otsu.threshold(imageBitmapDest, otsuThreshold);
 
             // Loop principal para encontrar a placa
-            while (cont != 7 && tentativas < 8)
+            while (cont <= 7 && tentativas < 6)
             {
-                Bitmap imageBitmap = (Bitmap)imageBitmapDest.Clone();
-                Filtros.segmentar8conectado(imageBitmap, imageBitmapDest, listaPini, listaPfim);
-
-                int altura, largura;
-                List<Point> _listaPini = new List<Point>();
-                List<Point> _listaPfim = new List<Point>();
-
-                // Verificando retângulos que podem corresponder aos dígitos da placa
-                for (int i = 0; i < listaPini.Count; i++)
+                if (primeiraIteracao)
                 {
-                    altura = listaPfim[i].Y - listaPini[i].Y;
-                    largura = listaPfim[i].X - listaPini[i].X;
-
-                    if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                    Bitmap imageBitmap = (Bitmap)imageBitmapDest.Clone();
+                    Filtros.segmentar8conectado(imageBitmap, imageBitmapDest, listaPini, listaPfim);
+                    
+                    for (int i = 0; i < listaPini.Count; i++)
                     {
-                        _listaPini.Add(listaPini[i]);
-                        _listaPfim.Add(listaPfim[i]);
-                        Filtros.desenhaRetangulo(imageBitmapDest, listaPini[i], listaPfim[i], Color.Green);
-                        cont++;
+                        altura = listaPfim[i].Y - listaPini[i].Y;
+                        largura = listaPfim[i].X - listaPini[i].X;
+
+                        if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                        {
+                            _listaPini.Add(listaPini[i]);
+                            _listaPfim.Add(listaPfim[i]);
+
+                            listaPontosInicioParaFiltrar.Add(listaPini[i]);
+                            listaPontosFinalParaFiltrar.Add(listaPfim[i]);
+                        
+                            Filtros.desenhaRetangulo(imageBitmapDest, listaPini[i], listaPfim[i], Color.Green);
+                            cont++;
+                        }
                     }
                 }
+                else
+                {
+                    if (cont != 7)
+                    {
+                        if (cont >= 1 && _listaPini.Count > 0 && _listaPfim.Count > 0)
+                        {
+                            Point pontoInicial = new Point(0, _listaPini[0].Y - 10);
+                            Point pontoFinal = new Point(imageBitmapDest.Width - 1, _listaPfim[_listaPfim.Count - 1].Y);
+                            
+                            int x = Math.Max(0, pontoInicial.X);
+                            int y = Math.Max(0, pontoInicial.Y);
+                            int width = Math.Min(imageBitmapSrc.Width - x, pontoFinal.X - pontoInicial.X + 1);
+                            int height = Math.Min(imageBitmapSrc.Height - y, pontoFinal.Y - pontoInicial.Y + 1);
 
-                // Se não detectou todos os dígitos
+                            if (width > 0 && height > 0)
+                            {
+                                try
+                                {
+                                    // Criar a região da placa corretamente
+                                    Rectangle region = new Rectangle(x, y, width, height);
+                                    Bitmap placaRegiao = imageBitmapSrc.Clone(region, imageBitmapSrc.PixelFormat);
+                                    
+                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlaca.png", ImageFormat.Png);
+                                    
+                                    otsu.ConvertToGrayDMA(placaRegiao);
+                                    otsuThreshold = otsu.getOtsuThreshold(placaRegiao);
+                                    otsu.threshold(placaRegiao, otsuThreshold);
+                                    
+                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaOtsu.png", ImageFormat.Png);
+                                    
+                                    Bitmap placaRegiaoDilatada = (Bitmap)placaRegiao.Clone();
+                                    
+                                    //DilatarImagem(placaRegiao, placaRegiaoDilatada, new ElementoEstruturante());
+                                    
+                                    placaRegiaoDilatada.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaDilatada.png", ImageFormat.Png);
+
+                                    listaPini.Clear();
+                                    listaPfim.Clear();
+
+                                    Filtros.segmentar8conectado(placaRegiaoDilatada, placaRegiaoDilatada, listaPini, listaPfim);
+                                    
+                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaSegmentada.png", ImageFormat.Png);
+                                    
+                                    for (int i = 0; i < listaPini.Count; i++)
+                                    {
+                                        altura = listaPfim[i].Y - listaPini[i].Y;
+                                        largura = listaPfim[i].X - listaPini[i].X;
+
+                                        if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                                        {
+                                            listaPontosInicioParaFiltrar.Add(listaPini[i]);
+                                            listaPontosFinalParaFiltrar.Add(listaPfim[i]);
+                                            
+                                            Filtros.desenhaRetangulo(placaRegiaoDilatada, listaPini[i], listaPfim[i], Color.Green);
+                                            
+                                            placaRegiaoDilatada.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaFiltrada.png", ImageFormat.Png);
+                                            
+                                            using (Graphics g = Graphics.FromImage(imageBitmapDest))
+                                            {
+                                                Rectangle targetRegion = new Rectangle(region.X, region.Y, placaRegiaoDilatada.Width, placaRegiaoDilatada.Height);
+                                                g.DrawImage(placaRegiaoDilatada, targetRegion);
+                                            }
+                                            
+                                            cont++;
+                                        }
+                                    }
+                                    
+                                    placaRegiao.Dispose();
+                                }
+                                catch (OutOfMemoryException ex)
+                                {
+                                    Console.WriteLine("Erro de memória ao clonar a região: " + ex.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            DividirImagemEmEspacosIguais(imageBitmapSrc, imageBitmapSrc.Height / qtdLinhasDivisao, listaPontosInicialDivisaoImagem, listaPontosFinalDivisaoImagem);
+
+                            // Itera por cada divisão criada
+                            for (int i = 0; i < listaPontosInicialDivisaoImagem.Count; i++)
+                            {
+                                // Define o retângulo da subimagem com base nos pontos da divisão
+                                Rectangle retangulo = new Rectangle(
+                                    listaPontosInicialDivisaoImagem[i].X,
+                                    listaPontosInicialDivisaoImagem[i].Y,
+                                    listaPontosFinalDivisaoImagem[i].X - listaPontosInicialDivisaoImagem[i].X,
+                                    listaPontosFinalDivisaoImagem[i].Y - listaPontosInicialDivisaoImagem[i].Y
+                                );
+
+                                Bitmap subImagem = imageBitmapSrc.Clone(retangulo, imageBitmapSrc.PixelFormat);
+                                
+                                otsu.ConvertToGrayDMA(subImagem);
+                                otsuThreshold = otsu.getOtsuThreshold(subImagem);
+                                otsu.threshold(subImagem, otsuThreshold);
+                                Bitmap subImagemClone = (Bitmap)subImagem.Clone();
+                                
+                                segmentar8conectado(subImagem, subImagemClone, subListaPini, subListaPfim);
+                                
+                                for (int j = 0; j < subListaPini.Count; j++)
+                                {
+                                    altura = subListaPfim[j].Y - subListaPini[j].Y;
+                                    largura = subListaPfim[j].X - subListaPini[j].X;
+
+                                    if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                                    {
+                                        _listaPini.Add(subListaPini[j]);
+                                        _listaPfim.Add(subListaPfim[j]);
+                                        
+                                        listaPontosInicioParaFiltrar.Add(subListaPini[j]);
+                                        listaPontosFinalParaFiltrar.Add(subListaPfim[j]);
+                                        
+                                        //Validar se o pixel que irá ser pintado está dentro dos limites da imagem
+                                        if (subListaPfim[j].X < subImagemClone.Width &&
+                                            subListaPfim[j].Y < subImagemClone.Height)
+                                        {
+                                            Filtros.desenhaRetangulo(subImagem, subListaPini[j], subListaPfim[j], Color.Green);
+                                        }
+                                        
+                                        using (Graphics g = Graphics.FromImage(imageBitmapDest))
+                                        {
+                                            Rectangle targetRegion = new Rectangle(retangulo.X, retangulo.Y, subImagem.Width, subImagem.Height);
+                                            g.DrawImage(subImagem, targetRegion);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Se nenhum dígito foi encontrado, aumenta a quantidade de divisões
+                            if (cont == 0)
+                            {
+                                qtdLinhasDivisao++;
+                            }
+                        }
+                    }
+                }
+                
                 if (cont != 7)
                 {
-                    if (cont > 1 && _listaPini.Count > 0 && _listaPfim.Count > 0)
-                    {
-                        // Define os pontos inicial e final da região
-                        Point pontoInicial = new Point(0, _listaPini[0].Y - 10);
-                        Point pontoFinal = new Point(imageBitmapDest.Width - 1, _listaPfim[_listaPfim.Count - 1].Y);
-
-                        // Validar dimensões do retângulo
-                        int x = Math.Max(0, pontoInicial.X);
-                        int y = Math.Max(0, pontoInicial.Y);
-                        int width = Math.Min(imageBitmapSrc.Width - x, pontoFinal.X - pontoInicial.X + 1);
-                        int height = Math.Min(imageBitmapSrc.Height - y, pontoFinal.Y - pontoInicial.Y + 1);
-
-                        if (width > 0 && height > 0)
-                        {
-                            try
-                            {
-                                Rectangle region = new Rectangle(x, y, width, height);
-                                Bitmap placaRegiao = imageBitmapSrc.Clone(region, imageBitmapSrc.PixelFormat);
-                                Bitmap placaRegiaoClone = (Bitmap)placaRegiao.Clone();
-
-                                // Aplica o limiar de Otsu na subimagem
-                                otsu.ConvertToGrayDMA(placaRegiao);
-                                otsuThreshold = otsu.getOtsuThreshold(placaRegiao);
-                                otsu.threshold(placaRegiao, otsuThreshold);
-
-                                listaPini.Clear();
-                                listaPfim.Clear();
-
-                                Filtros.segmentar8conectado(placaRegiao, placaRegiaoClone, listaPini, listaPfim);
-
-                                using (Graphics g = Graphics.FromImage(imageBitmapDest))
-                                {
-                                    g.DrawImage(placaRegiaoClone, region);
-                                }
-
-                                // Liberar memória
-                                placaRegiao.Dispose();
-                                placaRegiaoClone.Dispose();
-                            }
-                            catch (OutOfMemoryException ex)
-                            {
-                                Console.WriteLine("Erro de memória ao clonar a região: " + ex.Message);
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Dimensões inválidas para o retângulo da placa.");
-                        }
-                    }
-                    else
-                    {
-                        // Dividir a imagem em mais partes para tentar localizar a placa
-                        if (tentativas == 1)
-                        {
-                            DividirImagemEmEspacosIguais(imageBitmapDest, imageBitmapDest.Height / qtdLinhasDivisao, listaPontosInicialDivisaoImagem, listaPontosFinalDivisaoImagem);
-                    
-                            listaPini = listaPontosInicialDivisaoImagem;
-                            listaPfim = listaPontosFinalDivisaoImagem;
-                        }
-                        else
-                        {
-                            qtdLinhasDivisao++;
-                            DividirImagemEmEspacosIguais(imageBitmapDest, imageBitmapDest.Height / qtdLinhasDivisao, listaPontosInicialDivisaoImagem, listaPontosFinalDivisaoImagem);
-                    
-                            listaPini = listaPontosInicialDivisaoImagem;
-                            listaPfim = listaPontosFinalDivisaoImagem;
-                        }
-                    }
+                    Console.WriteLine("Não foi possível identificar todos os dígitos da placa.");
                 }
-
-                imageBitmap.Dispose();
+                
+                primeiraIteracao = false;
                 tentativas++;
             }
 
-            // Exibir mensagem caso não encontre os 7 dígitos
-            if (cont != 7)
+            //FiltrarListaPontosCaracteres(listaPontosInicioParaFiltrar, listaPontosFinalParaFiltrar);
+        }
+
+        public static void DilatarImagem(Bitmap image, Bitmap imageDest, ElementoEstruturante elementoEstruturante)
+        {
+            for (int y = elementoEstruturante.y; y < image.Height - elementoEstruturante.matriz.GetLength(0) + 1; y++)
             {
-                Console.WriteLine("Não foi possível identificar todos os dígitos da placa.");
+                for (int x = elementoEstruturante.x; x < image.Width - elementoEstruturante.matriz.GetLength(1) + 1; x++)
+                {
+                    if (MatchMask(image, elementoEstruturante, x, y))
+                    {
+                        imageDest.SetPixel(x, y, Color.Black);
+                    }
+                }
             }
+        }
+
+        public static bool MatchMask(Bitmap imagem, ElementoEstruturante elementoEstruturante, int x, int y)
+        {
+            int x2, y2;
+
+            x2 = x - elementoEstruturante.x;
+            y2 = y - elementoEstruturante.y;
+            
+            for (int i = 0; i < elementoEstruturante.matriz.GetLength(0); i++)
+            {
+                for (int j = 0; j < elementoEstruturante.matriz.GetLength(1); j++)
+                {
+                    if (elementoEstruturante.matriz[i, j] == 1 && Utils.Preto(imagem.GetPixel(x2 + j, y2 + i)))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
 
@@ -320,7 +424,6 @@ namespace ProjEncontraPlaca
                 listaPontosFinal.Add(pontoFinalExtra);
             }
         }
-
 
         //sem acesso direto a memoria
         public static void threshold(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
