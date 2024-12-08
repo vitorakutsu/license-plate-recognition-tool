@@ -157,7 +157,119 @@ namespace ProjEncontraPlaca
                 imageBitmapDest.SetPixel(maior.X, y, cor);
             }
         }
-        
+
+        public static void AplicarMascaraDeslizante(Bitmap placaRegiao, Bitmap imageBitmapDest, Otsu otsu, Rectangle region, ref int cont)
+        {
+            int larguraMascara = 240;
+
+            List<(Bitmap image, int cont)> melhores = new List<(Bitmap image, int cont)>();
+
+            for (int x = 0; x <= placaRegiao.Width - larguraMascara; x += 10)
+            {
+                cont = 0;
+                Rectangle mascara = new Rectangle(x, 0, larguraMascara, placaRegiao.Height);
+                Bitmap subImagem = placaRegiao.Clone(mascara, placaRegiao.PixelFormat);
+                Bitmap melhor = new Bitmap(subImagem);
+
+                subImagem.Save("C:\\Users\\VITOR\\Downloads\\Placas\\RegiaoPlaca" + x + ".png", ImageFormat.Png);
+
+                otsu.ConvertToGrayDMA(subImagem);
+                int otsuThreshold = otsu.getOtsuThreshold(subImagem);
+                otsu.threshold(subImagem, otsuThreshold);
+
+                List<Point> listaPiniMascara = new List<Point>();
+                List<Point> listaPfimMascara = new List<Point>();
+
+                Filtros.segmentar8conectado(subImagem, subImagem, listaPiniMascara, listaPfimMascara);
+
+                foreach (var ini in listaPiniMascara)
+                {
+                    int altura = listaPfimMascara[listaPiniMascara.IndexOf(ini)].Y - ini.Y;
+                    int largura = listaPfimMascara[listaPiniMascara.IndexOf(ini)].X - ini.X;
+
+                    if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                    {
+                        cont++;
+
+                        Filtros.desenhaRetangulo(subImagem, ini, listaPfimMascara[listaPiniMascara.IndexOf(ini)], Color.Green);
+
+                        using (Graphics g = Graphics.FromImage(imageBitmapDest))
+                        {
+                            Rectangle targetRegion = new Rectangle(x, region.Y, subImagem.Width, subImagem.Height);
+                            g.DrawImage(subImagem, targetRegion);
+                        }
+                    }
+                }
+
+                melhores.Add((melhor, cont));
+
+                subImagem.Dispose();
+
+                if (cont >= 7) // Parar se todos os caracteres forem encontrados
+                    return;
+
+            }
+
+            melhores.Sort((a, b) => b.cont.CompareTo(a.cont));
+            int i = 0;
+            foreach (var teste in melhores)
+            {
+                teste.image.Save("C:\\Users\\VITOR\\Downloads\\Melhores\\Melhores" + i + " .png", ImageFormat.Png);
+                i++;
+            }
+
+            if (cont < 7)
+            {
+                foreach (var melhor in melhores)
+                {
+                    Bitmap melhorImagem = melhor.image;
+                    int alturaBase = 30;
+                    for (int y = 0; y <= placaRegiao.Height - alturaBase; y += 5) // Incremento de 1
+                    {
+                        cont = 0;
+                        int alturaReal = Math.Min(alturaBase, melhorImagem.Height - y);
+                        Rectangle mascaraAltura = new Rectangle(0, y, melhorImagem.Width, alturaReal);
+                        Bitmap subImagemAltura = melhorImagem.Clone(mascaraAltura, melhorImagem.PixelFormat);
+
+                        subImagemAltura.Save("C:\\Users\\VITOR\\Downloads\\Altura\\altura" + y + ".png", ImageFormat.Png);
+
+                        otsu.ConvertToGrayDMA(subImagemAltura);
+                        int otsuThreshold = otsu.getOtsuThreshold(subImagemAltura);
+                        otsu.threshold(subImagemAltura, otsuThreshold);
+
+                        List<Point> listaPiniAltura = new List<Point>();
+                        List<Point> listaPfimAltura = new List<Point>();
+
+                        Filtros.segmentar8conectado(subImagemAltura, subImagemAltura, listaPiniAltura, listaPfimAltura);
+
+                        foreach (var ini in listaPiniAltura)
+                        {
+                            int altura = listaPfimAltura[listaPiniAltura.IndexOf(ini)].Y - ini.Y;
+                            int largura = listaPfimAltura[listaPiniAltura.IndexOf(ini)].X - ini.X;
+
+                            if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                            {
+                                cont++;
+
+                                Filtros.desenhaRetangulo(subImagemAltura, ini, listaPfimAltura[listaPiniAltura.IndexOf(ini)], Color.Green);
+
+                                using (Graphics g = Graphics.FromImage(imageBitmapDest))
+                                {
+                                    Rectangle targetRegion = new Rectangle(region.X, y, subImagemAltura.Width, subImagemAltura.Height);
+                                    g.DrawImage(subImagemAltura, targetRegion);
+                                }
+                            }
+                        }
+
+                        subImagemAltura.Dispose();
+
+                        if (cont >= 7) // Parar se todos os caracteres forem encontrados
+                            return;
+                    }
+                }
+            }
+        }
+
         public static void encontra_placa(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
         {
             List<Point> listaPini = new List<Point>();
@@ -192,7 +304,7 @@ namespace ProjEncontraPlaca
                         altura = listaPfim[i].Y - listaPini[i].Y;
                         largura = listaPfim[i].X - listaPini[i].X;
 
-                        if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                        if (altura > 15 && altura < 27 && largura > 3 && largura < 39)
                         {
                             _listaPini.Add(listaPini[i]);
                             _listaPfim.Add(listaPfim[i]);
@@ -213,7 +325,7 @@ namespace ProjEncontraPlaca
                         {
                             Point pontoInicial = new Point(0, _listaPini[0].Y - 10);
                             Point pontoFinal = new Point(imageBitmapDest.Width - 1, _listaPfim[_listaPfim.Count - 1].Y);
-                            
+
                             int x = Math.Max(0, pontoInicial.X);
                             int y = Math.Max(0, pontoInicial.Y);
                             int width = Math.Min(imageBitmapSrc.Width - x, pontoFinal.X - pontoInicial.X + 1);
@@ -223,55 +335,60 @@ namespace ProjEncontraPlaca
                             {
                                 try
                                 {
+                                    cont = 0;
                                     // Criar a região da placa corretamente
                                     Rectangle region = new Rectangle(x, y, width, height);
                                     Bitmap placaRegiao = imageBitmapSrc.Clone(region, imageBitmapSrc.PixelFormat);
-                                    
-                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlaca.png", ImageFormat.Png);
-                                    
+
+                                    placaRegiao.Save("C:\\Users\\VITOR\\Downloads\\Regioes\\RegiaoPlaca.png", ImageFormat.Png);
+
+                                    // Aplica Otsu e segmentação na região da placa
                                     otsu.ConvertToGrayDMA(placaRegiao);
                                     otsuThreshold = otsu.getOtsuThreshold(placaRegiao);
                                     otsu.threshold(placaRegiao, otsuThreshold);
-                                    
-                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaOtsu.png", ImageFormat.Png);                                    
-                                    
+
+                                    placaRegiao.Save("C:\\Users\\VITOR\\Downloads\\Regioes\\RegiaoPlacaOtsu.png", ImageFormat.Png);
+
                                     Bitmap placaRegiaoDilatada = (Bitmap)placaRegiao.Clone();
-                                    
-                                    //DilatarImagem(placaRegiao, placaRegiaoDilatada, new ElementoEstruturante());
-                                    
-                                    placaRegiaoDilatada.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaDilatada.png", ImageFormat.Png);
 
                                     listaPini.Clear();
                                     listaPfim.Clear();
 
                                     Filtros.segmentar8conectado(placaRegiaoDilatada, placaRegiaoDilatada, listaPini, listaPfim);
-                                    
-                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaSegmentada.png", ImageFormat.Png);
-                                    
+
                                     for (int i = 0; i < listaPini.Count; i++)
                                     {
                                         altura = listaPfim[i].Y - listaPini[i].Y;
                                         largura = listaPfim[i].X - listaPini[i].X;
 
-                                        if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                                        if (altura > 15 && altura < 27 && largura > 3 && largura < 39)
                                         {
                                             listaPontosInicioParaFiltrar.Add(listaPini[i]);
                                             listaPontosFinalParaFiltrar.Add(listaPfim[i]);
-                                            
+
                                             Filtros.desenhaRetangulo(placaRegiaoDilatada, listaPini[i], listaPfim[i], Color.Green);
-                                            
-                                            placaRegiaoDilatada.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaFiltrada.png", ImageFormat.Png);
-                                            
+
+                                            placaRegiaoDilatada.Save("C:\\Users\\VITOR\\Downloads\\Regioes\\RegiaoPlacaFiltrada.png", ImageFormat.Png);
+
                                             using (Graphics g = Graphics.FromImage(imageBitmapDest))
                                             {
                                                 Rectangle targetRegion = new Rectangle(region.X, region.Y, placaRegiaoDilatada.Width, placaRegiaoDilatada.Height);
                                                 g.DrawImage(placaRegiaoDilatada, targetRegion);
                                             }
-                                            
+
                                             cont++;
                                         }
                                     }
-                                    
+
+                                    // Fallback para aplicar a máscara deslizante
+                                    if (cont < 7)
+                                    {
+                                        Bitmap placa = imageBitmapSrc.Clone(region, imageBitmapSrc.PixelFormat);
+                                        Console.WriteLine("Tentando máscara deslizante...");
+                                        cont = 0;
+                                        AplicarMascaraDeslizante(placa, imageBitmapDest, otsu, region, ref cont);
+                                    }
+
                                     placaRegiao.Dispose();
                                 }
                                 catch (OutOfMemoryException ex)
@@ -280,6 +397,7 @@ namespace ProjEncontraPlaca
                                 }
                             }
                         }
+
                         else
                         {
                             DividirImagemEmEspacosIguais(imageBitmapSrc, imageBitmapSrc.Height / qtdLinhasDivisao, listaPontosInicialDivisaoImagem, listaPontosFinalDivisaoImagem);
@@ -304,7 +422,7 @@ namespace ProjEncontraPlaca
                                 
                                 segmentar8conectado(subImagem, subImagemClone, subListaPini, subListaPfim);
                                 
-                                subImagemClone.Save("C:\\Users\\Pedro Filitto\\Downloads\\SubImagem" + i +".png", ImageFormat.Png);
+                                subImagemClone.Save("C:\\Users\\VITOR\\Downloads\\Regioes\\SubImagem" + i +".png", ImageFormat.Png);
                                 
                                 for (int j = 0; j < subListaPini.Count; j++)
                                 {
@@ -329,17 +447,20 @@ namespace ProjEncontraPlaca
                                         cont++;
                                     }
                                 }
+
+                                if (cont < 7)
+                                {
+                                    cont = 0;
+                                    Bitmap placa = imageBitmapSrc.Clone(retangulo, imageBitmapSrc.PixelFormat);
+                                    Console.WriteLine("Tentando máscara deslizante...");
+                                    AplicarMascaraDeslizante(placa, imageBitmapDest, otsu, retangulo, ref cont);
+                                }
                             }
 
                             // Se nenhum dígito foi encontrado, aumenta a quantidade de divisões
                             if (cont == 0)
                             {
                                 qtdLinhasDivisao++;
-                            }
-                            else
-                            {
-                                _listaPini = subListaPini;
-                                _listaPfim = subListaPfim;
                             }
                         }
                     }
@@ -389,7 +510,6 @@ namespace ProjEncontraPlaca
 
             return false;
         }
-
 
         public static void DividirImagemEmEspacosIguais(Bitmap imageBitmap, int espacosEntreLinhas, List<Point> listaPontosInicial, List<Point> listaPontosFinal)
         {
@@ -446,200 +566,6 @@ namespace ProjEncontraPlaca
                     b = cor.B;
                     gs = (Int32)(r * 0.1140 + g * 0.5870 + b * 0.2990);
                     if (gs > 127)
-                        gs = 255;
-                    else
-                        gs = 0;
-
-                    //nova cor
-                    Color newcolor = Color.FromArgb(gs, gs, gs);
-                    imageBitmapDest.SetPixel(x, y, newcolor);
-                }
-            }
-        }
-
-        public static void countour(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
-        {
-            int width = imageBitmapSrc.Width;
-            int height = imageBitmapSrc.Height;
-            int x, y, x2, y2, aux_cR;
-            bool flag;
-
-            Color corB = Color.FromArgb(255, 255, 255);
-            for (y = 0; y < height; y++)
-                for (x = 0; x < width; x++)
-                    imageBitmapDest.SetPixel(x, y, corB);
-
-            Bitmap imageBranca = (Bitmap)imageBitmapDest.Clone();
-
-            for (y = 0; y < height; y++)
-            {
-                for (x = 0; x < width - 1; x++)
-                {
-                    //obtendo a cor do pixel
-                    Color cor = imageBitmapSrc.GetPixel(x, y);
-                    Color cor2 = imageBitmapSrc.GetPixel(x + 1, y);
-                    if (cor.R == 255 && cor2.R == 0 && imageBitmapDest.GetPixel(x + 1, y).R == 255)
-                    {
-                        Bitmap imageAux = (Bitmap)imageBranca.Clone();
-                        x2 = x;
-                        y2 = y;
-                        do
-                        {
-                            Color p0, p1, p2, p3, p4, p5, p6, p7;
-                            imageBitmapDest.SetPixel(x2, y2, Color.FromArgb(0, 0, 0));
-                            imageAux.SetPixel(x2, y2, Color.FromArgb(1, 1, 1));
-
-                            p0 = imageBitmapSrc.GetPixel(x2 + 1, y2);
-                            p1 = imageBitmapSrc.GetPixel(x2 + 1, y2 - 1);
-                            p2 = imageBitmapSrc.GetPixel(x2, y2 - 1);
-                            p3 = imageBitmapSrc.GetPixel(x2 - 1, y2 - 1);
-                            p4 = imageBitmapSrc.GetPixel(x2 - 1, y2);
-                            p5 = imageBitmapSrc.GetPixel(x2 - 1, y2 + 1);
-                            p6 = imageBitmapSrc.GetPixel(x2, y2 + 1);
-                            p7 = imageBitmapSrc.GetPixel(x2 + 1, y2 + 1);
-
-                            if (p1.R == 255 && p0.R == 255 && p2.R == 0)
-                            {
-                                x2 = x2 + 1;
-                                y2 = y2 - 1;
-                            }
-                            else
-                             if (p3.R == 255 && p4.R == 0 && p2.R == 255)
-                            {
-                                x2 = x2 - 1;
-                                y2 = y2 - 1;
-                            }
-                            else
-                             if (p5.R == 255 && p4.R == 255 && p6.R == 0)
-                            {
-                                x2 = x2 - 1;
-                                y2 = y2 + 1;
-                            }
-                            else
-                            if (p7.R == 255 && p6.R == 255 && p0.R == 0)
-                            {
-                                x2 = x2 + 1;
-                                y2 = y2 + 1;
-                            }
-                            else
-                            if (p0.R == 255 && p2.R == 0 && p1.R == 0 && imageAux.GetPixel(x2 + 1, y2).R != 2)
-                            {
-                                x2 = x2 + 1;
-                                flag = true;
-                                do
-                                {
-                                    p0 = imageBitmapSrc.GetPixel(x2 + 1, y2);
-                                    p1 = imageBitmapSrc.GetPixel(x2 + 1, y2 - 1);
-                                    p2 = imageBitmapSrc.GetPixel(x2, y2 - 1);
-                                    aux_cR = imageAux.GetPixel(x2, y2).R;
-                                    if (p0.R == 255 && p2.R == 0 && p1.R == 0 && aux_cR == 1)
-                                    {
-                                        imageAux.SetPixel(x2, y2, Color.FromArgb(2, 2, 2));
-                                        x2 = x2 + 1;
-                                    }
-                                    else
-                                        flag = false;
-                                } while (flag);
-                            }
-                            else
-                            if (p0.R == 255 && p2.R == 0 && p1.R == 0 && imageAux.GetPixel(x2 + 1, y2).R == 2)
-                                x2 = x2 + 1;
-                            else
-                            if (p2.R == 255 && p4.R == 0 && p3.R == 0 && imageAux.GetPixel(x2, y2 - 1).R != 2)
-                            {
-                                y2 = y2 - 1;
-                                flag = true;
-                                do
-                                {
-                                    p2 = imageBitmapSrc.GetPixel(x2, y2 - 1);
-                                    p3 = imageBitmapSrc.GetPixel(x2 - 1, y2 - 1);
-                                    p4 = imageBitmapSrc.GetPixel(x2 - 1, y2);
-                                    aux_cR = imageAux.GetPixel(x2, y2).R;
-                                    if (p2.R == 255 && p4.R == 0 && p3.R == 0 && aux_cR == 1)
-                                    {
-                                        imageAux.SetPixel(x2, y2, Color.FromArgb(2, 2, 2));
-                                        y2 = y2 - 1;
-                                    }
-                                    else
-                                        flag = false;
-                                } while (flag);
-                            }
-                            else
-                            if (p2.R == 255 && p4.R == 0 && p3.R == 0 && imageAux.GetPixel(x2, y2 - 1).R == 2)
-                                y2 = y2 - 1;
-                            else
-                            if (p4.R == 255 && p5.R == 0 && p6.R == 0 && imageAux.GetPixel(x2 - 1, y2).R != 2)
-                            {
-                                x2 = x2 - 1;
-                                flag = true;
-                                do
-                                {
-                                    p4 = imageBitmapSrc.GetPixel(x2 - 1, y2);
-                                    p5 = imageBitmapSrc.GetPixel(x2 - 1, y2 + 1);
-                                    p6 = imageBitmapSrc.GetPixel(x2, y2 + 1);
-                                    aux_cR = imageAux.GetPixel(x2, y2).R;
-                                    if (p4.R == 255 && p5.R == 0 && p6.R == 0 && aux_cR == 1)
-                                    {
-                                        imageAux.SetPixel(x2, y2, Color.FromArgb(2, 2, 2));
-                                        x2 = x2 - 1;
-                                    }
-                                    else
-                                        flag = false;
-                                } while (flag);
-                            }
-                            else
-                            if (p4.R == 255 && p5.R == 0 && p6.R == 0 && imageAux.GetPixel(x2 - 1, y2).R == 2)
-                                x2 = x2 - 1;
-                            else
-                            if (p6.R == 255 && p0.R == 0 && p7.R == 0 && imageAux.GetPixel(x2, y2 + 1).R != 2)
-                            {
-                                y2 = y2 + 1;
-                                flag = true;
-                                do
-                                {
-                                    p0 = imageBitmapSrc.GetPixel(x2 + 1, y2);
-                                    p6 = imageBitmapSrc.GetPixel(x2, y2 + 1);
-                                    p7 = imageBitmapSrc.GetPixel(x2 + 1, y2 + 1);
-                                    aux_cR = imageAux.GetPixel(x2, y2).R;
-                                    if (p6.R == 255 && p0.R == 0 && p7.R == 0 && aux_cR == 1)
-                                    {
-                                        imageAux.SetPixel(x2, y2, Color.FromArgb(2, 2, 2));
-                                        y2 = y2 + 1;
-                                    }
-                                    else
-                                        flag = false;
-                                } while (flag);
-                            }
-                            else
-                            if (p6.R == 255 && p0.R == 0 && p7.R == 0 && imageAux.GetPixel(x2, y2 + 1).R == 2)
-                                y2 = y2 + 1;
-                        }
-                        while (x != x2 || y != y2);
-                    }
-                }
-            }
-        }
-
-        public static void brancoPreto(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
-        {
-            int width = imageBitmapSrc.Width;
-            int height = imageBitmapSrc.Height;
-            int r, g, b;
-            Int32 gs;
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    //obtendo a cor do pixel
-                    Color cor = imageBitmapSrc.GetPixel(x, y);
-
-                    r = cor.R;
-                    g = cor.G;
-                    b = cor.B;
-                    gs = (Int32)(r * 0.2990 + g * 0.5870 + b * 0.1140);
-
-                    if (gs > 220)
                         gs = 255;
                     else
                         gs = 0;

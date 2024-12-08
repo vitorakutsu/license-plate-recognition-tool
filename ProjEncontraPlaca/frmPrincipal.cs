@@ -78,5 +78,22 @@ namespace ProjEncontraPlaca
             transicao = cl_numeros.retornaTransicaoHorizontal(img_dig);
             Console.WriteLine(cl_numeros.reconheceCaractereTransicao_2pixels(transicao));
         }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            imageBitmap = (Bitmap)image.Clone();
+            Bitmap temp = (Bitmap)image.Clone();
+            Otsu otsu = new Otsu();
+            otsu.ConvertToGrayDMA(temp);
+            int otsuThreshold = otsu.getOtsuThreshold((Bitmap)temp);
+            otsu.threshold(temp, otsuThreshold);
+            textBox1.Text = otsuThreshold.ToString();
+
+            Bitmap newImage = new Bitmap(temp);
+
+            Filtros.DilatarImagem(newImage, temp, new ElementoEstruturante());
+
+            pictBoxImg.Image = temp;
+        }
     }
 }
