@@ -175,13 +175,11 @@ namespace ProjEncontraPlaca
             bool primeiraIteracao = true;
             
             Otsu otsu = new Otsu();
-
-            // Convertendo a imagem para escala de cinza e aplicando o limiar de Otsu
+            
             otsu.ConvertToGrayDMA(imageBitmapDest);
             int otsuThreshold = otsu.getOtsuThreshold(imageBitmapDest);
             otsu.threshold(imageBitmapDest, otsuThreshold);
-
-            // Loop principal para encontrar a placa
+            
             while (cont <= 7 && tentativas < 6)
             {
                 if (primeiraIteracao)
@@ -235,7 +233,7 @@ namespace ProjEncontraPlaca
                                     otsuThreshold = otsu.getOtsuThreshold(placaRegiao);
                                     otsu.threshold(placaRegiao, otsuThreshold);
                                     
-                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaOtsu.png", ImageFormat.Png);
+                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\RegiaoPlacaOtsu.png", ImageFormat.Png);                                    
                                     
                                     Bitmap placaRegiaoDilatada = (Bitmap)placaRegiao.Clone();
                                     
@@ -306,6 +304,8 @@ namespace ProjEncontraPlaca
                                 
                                 segmentar8conectado(subImagem, subImagemClone, subListaPini, subListaPfim);
                                 
+                                subImagemClone.Save("C:\\Users\\Pedro Filitto\\Downloads\\SubImagem" + i +".png", ImageFormat.Png);
+                                
                                 for (int j = 0; j < subListaPini.Count; j++)
                                 {
                                     altura = subListaPfim[j].Y - subListaPini[j].Y;
@@ -325,12 +325,8 @@ namespace ProjEncontraPlaca
                                         {
                                             Filtros.desenhaRetangulo(subImagem, subListaPini[j], subListaPfim[j], Color.Green);
                                         }
-                                        
-                                        using (Graphics g = Graphics.FromImage(imageBitmapDest))
-                                        {
-                                            Rectangle targetRegion = new Rectangle(retangulo.X, retangulo.Y, subImagem.Width, subImagem.Height);
-                                            g.DrawImage(subImagem, targetRegion);
-                                        }
+
+                                        cont++;
                                     }
                                 }
                             }
@@ -339,6 +335,11 @@ namespace ProjEncontraPlaca
                             if (cont == 0)
                             {
                                 qtdLinhasDivisao++;
+                            }
+                            else
+                            {
+                                _listaPini = subListaPini;
+                                _listaPfim = subListaPfim;
                             }
                         }
                     }
