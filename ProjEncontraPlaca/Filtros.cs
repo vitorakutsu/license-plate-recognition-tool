@@ -11,7 +11,7 @@ namespace ProjEncontraPlaca
 {
     class Filtros
     {
-        private static void segmenta8(Bitmap imageBitmapSrc, Bitmap imageBitmapDest, Point ini, List<Point> listaPini, List<Point> listaPfim, Color cor_pintar)
+        private static void Segmenta8(Bitmap imageBitmapSrc, Bitmap imageBitmapDest, Point ini, List<Point> listaPini, List<Point> listaPfim, Color cor_pintar)
         {
             Point menor = new Point(), maior = new Point(), patual = new Point();
             Queue<Point> fila = new Queue<Point>();
@@ -116,12 +116,12 @@ namespace ProjEncontraPlaca
                 menor.Y--;
             if (maior.Y < imageBitmapSrc.Height - 1)
                 maior.Y++;
-            desenhaRetangulo(imageBitmapDest, menor, maior, Color.FromArgb(255, 0, 0));
+            DesenhaRetangulo(imageBitmapDest, menor, maior, Color.FromArgb(255, 0, 0));
             listaPini.Add(menor);
             listaPfim.Add(maior);
         }
 
-        public static void segmentar8conectado(Bitmap imageBitmapSrc, Bitmap imageBitmapDest, List<Point> listaPini, List<Point> listaPfim)
+        public static void Segmenta8Conectado(Bitmap imageBitmapSrc, Bitmap imageBitmapDest, List<Point> listaPini, List<Point> listaPfim)
         {
             int width = imageBitmapSrc.Width;
             int height = imageBitmapSrc.Height;
@@ -139,12 +139,12 @@ namespace ProjEncontraPlaca
                     b = cor.B;
 
                     if (r == 0)
-                        segmenta8(imageBitmapSrc, imageBitmapDest, new Point(x, y), listaPini, listaPfim, Color.FromArgb(100, 100, 100));
+                        Segmenta8(imageBitmapSrc, imageBitmapDest, new Point(x, y), listaPini, listaPfim, Color.FromArgb(100, 100, 100));
                 }
             }
         }
 
-        private static void desenhaRetangulo(Bitmap imageBitmapDest, Point menor, Point maior, Color cor)
+        private static void DesenhaRetangulo(Bitmap imageBitmapDest, Point menor, Point maior, Color cor)
         {
             for (int x = menor.X; x <= maior.X; x++)
             {
@@ -174,7 +174,7 @@ namespace ProjEncontraPlaca
                 Bitmap subImagem = placaRegiao.Clone(mascara, placaRegiao.PixelFormat);
                 Bitmap melhor = new Bitmap(subImagem);
 
-                subImagem.Save("C:\\Users\\Pedro Filitto\\Downloads\\Placas\\RegiaoPlaca" + x + ".png", ImageFormat.Png);
+                subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Placas\\RegiaoPlaca" + x + ".png", ImageFormat.Png);
 
                 otsu.ConvertToGrayDMA(subImagem);
                 int otsuThreshold = otsu.getOtsuThreshold(subImagem);
@@ -183,7 +183,7 @@ namespace ProjEncontraPlaca
                 List<Point> listaPiniMascara = new List<Point>();
                 List<Point> listaPfimMascara = new List<Point>();
 
-                Filtros.segmentar8conectado(subImagem, subImagem, listaPiniMascara, listaPfimMascara);
+                Filtros.Segmenta8Conectado(subImagem, subImagem, listaPiniMascara, listaPfimMascara);
 
                 foreach (var ini in listaPiniMascara)
                 {
@@ -197,10 +197,10 @@ namespace ProjEncontraPlaca
                         listaPontosInicioParaFiltrar.Add(ini);
                         listaPontosFinalParaFiltrar.Add(listaPfimMascara[listaPiniMascara.IndexOf(ini)]);
 
-                        Filtros.desenhaRetangulo(subImagem, ini, listaPfimMascara[listaPiniMascara.IndexOf(ini)], Color.Green);
+                        Filtros.DesenhaRetangulo(subImagem, ini, listaPfimMascara[listaPiniMascara.IndexOf(ini)], Color.Green);
 
                         if (cont == 7)
-                            subImagem.Save("C:\\Users\\Pedro Filitto\\Downloads\\Placas\\MelhorPlaca.png", ImageFormat.Png);;
+                            subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Placas\\MelhorPlaca.png", ImageFormat.Png);;
 
                         using (Graphics g = Graphics.FromImage(imageBitmapDest))
                         {
@@ -222,7 +222,7 @@ namespace ProjEncontraPlaca
             int i = 0;
             foreach (var teste in melhores)
             {
-                teste.image.Save("C:\\Users\\Pedro Filitto\\Downloads\\Melhores\\Melhores" + i + " .png", ImageFormat.Png);
+                teste.image.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Melhores\\Melhores" + i + " .png", ImageFormat.Png);
                 i++;
             }
             
@@ -245,7 +245,7 @@ namespace ProjEncontraPlaca
                         Rectangle mascaraAltura = new Rectangle(0, y, melhorImagem.Width, alturaReal);
                         Bitmap subImagemAltura = melhorImagem.Clone(mascaraAltura, melhorImagem.PixelFormat);
 
-                        subImagemAltura.Save("C:\\Users\\Pedro Filitto\\Downloads\\Altura\\altura" + y + ".png", ImageFormat.Png);
+                        subImagemAltura.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Altura\\altura" + y + ".png", ImageFormat.Png);
 
                         otsu.ConvertToGrayDMA(subImagemAltura);
                         int otsuThreshold = otsu.getOtsuThreshold(subImagemAltura);
@@ -254,7 +254,7 @@ namespace ProjEncontraPlaca
                         List<Point> listaPiniAltura = new List<Point>();
                         List<Point> listaPfimAltura = new List<Point>();
 
-                        Filtros.segmentar8conectado(subImagemAltura, subImagemAltura, listaPiniAltura, listaPfimAltura);
+                        Filtros.Segmenta8Conectado(subImagemAltura, subImagemAltura, listaPiniAltura, listaPfimAltura);
 
                         foreach (var ini in listaPiniAltura)
                         {
@@ -268,7 +268,7 @@ namespace ProjEncontraPlaca
                                 listaPontosInicioParaFiltrar.Add(ini);
                                 listaPontosFinalParaFiltrar.Add(listaPfimAltura[listaPiniAltura.IndexOf(ini)]);
 
-                                Filtros.desenhaRetangulo(subImagemAltura, ini, listaPfimAltura[listaPiniAltura.IndexOf(ini)], Color.Green);
+                                Filtros.DesenhaRetangulo(subImagemAltura, ini, listaPfimAltura[listaPiniAltura.IndexOf(ini)], Color.Green);
 
                                 using (Graphics g = Graphics.FromImage(imageBitmapDest))
                                 {
@@ -287,7 +287,7 @@ namespace ProjEncontraPlaca
             }
         }
 
-        public static void encontra_placa(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
+        public static void EncontraPlaca(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
         {
             List<Point> listaPini = new List<Point>();
             List<Point> listaPfim = new List<Point>();
@@ -321,7 +321,7 @@ namespace ProjEncontraPlaca
                 {
                     caso = 0;
                     Bitmap imageBitmap = (Bitmap)imageBitmapDest.Clone();
-                    Filtros.segmentar8conectado(imageBitmap, imageBitmapDest, listaPini, listaPfim);
+                    Filtros.Segmenta8Conectado(imageBitmap, imageBitmapDest, listaPini, listaPfim);
                     
                     for (int i = 0; i < listaPini.Count; i++)
                     {
@@ -336,7 +336,7 @@ namespace ProjEncontraPlaca
                             listaPontosInicioParaFiltrar.Add(listaPini[i]);
                             listaPontosFinalParaFiltrar.Add(listaPfim[i]);
                         
-                            Filtros.desenhaRetangulo(imageBitmapDest, listaPini[i], listaPfim[i], Color.Green);
+                            Filtros.DesenhaRetangulo(imageBitmapDest, listaPini[i], listaPfim[i], Color.Green);
                             cont++;
                         }
                     }
@@ -369,21 +369,21 @@ namespace ProjEncontraPlaca
                                     Rectangle region = new Rectangle(x, y, width, height);
                                     Bitmap placaRegiao = imageBitmapSrc.Clone(region, imageBitmapSrc.PixelFormat);
 
-                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\Regioes\\RegiaoPlaca.png", ImageFormat.Png);
+                                    placaRegiao.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Regioes\\RegiaoPlaca.png", ImageFormat.Png);
 
                                     // Aplica Otsu e segmentação na região da placa
                                     otsu.ConvertToGrayDMA(placaRegiao);
                                     otsuThreshold = otsu.getOtsuThreshold(placaRegiao);
                                     otsu.threshold(placaRegiao, otsuThreshold);
 
-                                    placaRegiao.Save("C:\\Users\\Pedro Filitto\\Downloads\\Regioes\\RegiaoPlacaOtsu.png", ImageFormat.Png);
+                                    placaRegiao.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Regioes\\RegiaoPlacaOtsu.png", ImageFormat.Png);
 
                                     placaRegiaoDilatada = (Bitmap)placaRegiao.Clone();
 
                                     listaPini.Clear();
                                     listaPfim.Clear();
 
-                                    Filtros.segmentar8conectado(placaRegiaoDilatada, placaRegiaoDilatada, listaPini, listaPfim);
+                                    Filtros.Segmenta8Conectado(placaRegiaoDilatada, placaRegiaoDilatada, listaPini, listaPfim);
 
                                     for (int i = 0; i < listaPini.Count; i++)
                                     {
@@ -395,9 +395,9 @@ namespace ProjEncontraPlaca
                                             listaPontosInicioParaFiltrar.Add(listaPini[i]);
                                             listaPontosFinalParaFiltrar.Add(listaPfim[i]);
 
-                                            Filtros.desenhaRetangulo(placaRegiaoDilatada, listaPini[i], listaPfim[i], Color.Green);
+                                            Filtros.DesenhaRetangulo(placaRegiaoDilatada, listaPini[i], listaPfim[i], Color.Green);
 
-                                            placaRegiaoDilatada.Save("C:\\Users\\Pedro Filitto\\Downloads\\Regioes\\RegiaoPlacaFiltrada.png", ImageFormat.Png);
+                                            placaRegiaoDilatada.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Regioes\\RegiaoPlacaFiltrada.png", ImageFormat.Png);
 
                                             using (Graphics g = Graphics.FromImage(imageBitmapDest))
                                             {
@@ -451,9 +451,9 @@ namespace ProjEncontraPlaca
                                 otsu.threshold(subImagem, otsuThreshold);
                                 Bitmap subImagemClone = (Bitmap)subImagem.Clone();
                                 
-                                segmentar8conectado(subImagem, subImagemClone, subListaPini, subListaPfim);
+                                Segmenta8Conectado(subImagem, subImagemClone, subListaPini, subListaPfim);
                                 
-                                subImagemClone.Save("C:\\Users\\Pedro Filitto\\Downloads\\Regioes\\SubImagem" + i +".png", ImageFormat.Png);
+                                subImagemClone.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Regioes\\SubImagem" + i +".png", ImageFormat.Png);
                                 
                                 for (int j = 0; j < subListaPini.Count; j++)
                                 {
@@ -472,7 +472,7 @@ namespace ProjEncontraPlaca
                                         if (subListaPfim[j].X < subImagemClone.Width &&
                                             subListaPfim[j].Y < subImagemClone.Height)
                                         {
-                                            Filtros.desenhaRetangulo(subImagem, subListaPini[j], subListaPfim[j], Color.Green);
+                                            Filtros.DesenhaRetangulo(subImagem, subListaPini[j], subListaPfim[j], Color.Green);
                                         }
 
                                         cont++;
@@ -511,22 +511,22 @@ namespace ProjEncontraPlaca
             {
                 case 0:
                     ReconheceCaracter(imageBitmapDest, _listaPini, _listaPfim, caso);
-                    imageBitmapDest.Save("C:\\Users\\Pedro Filitto\\Downloads\\PlacaSegmentadaCaso0.png", ImageFormat.Png);
+                    imageBitmapDest.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaSegmentadaCaso0.png", ImageFormat.Png);
                     break;
                 case 1:
                     ReconheceCaracter(placaRegiaoDilatada, listaPontosInicioParaFiltrar, listaPontosFinalParaFiltrar, caso);
-                    placaRegiaoDilatada.Save("C:\\Users\\Pedro Filitto\\Downloads\\PlacaSegmentadaCaso1.png", ImageFormat.Png);
+                    placaRegiaoDilatada.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaSegmentadaCaso1.png", ImageFormat.Png);
                     break;
                 case 2:
                     placaJanelaDeslizante =
-                        (Bitmap)Image.FromFile("C:\\Users\\Pedro Filitto\\Downloads\\Placas\\MelhorPlaca.png");
+                        (Bitmap)Image.FromFile("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Placas\\MelhorPlaca.png");
                     ReconheceCaracter(placaJanelaDeslizante, listaPontosInicioMascaraDeslizante,
                         listaPontosFinalMascaraDeslizante, caso);
-                    placaJanelaDeslizante.Save("C:\\Users\\Pedro Filitto\\Downloads\\PlacaSegmentadaCaso2.png", ImageFormat.Png);
+                    placaJanelaDeslizante.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaSegmentadaCaso2.png", ImageFormat.Png);
                     break;
                 case 3:
                     ReconheceCaracter(subImagem, listaPontosInicioParaFiltrar, listaPontosFinalParaFiltrar, caso);
-                    subImagem.Save("C:\\Users\\Pedro Filitto\\Downloads\\PlacaSegmentadaCaso3.png", ImageFormat.Png);
+                    subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaSegmentadaCaso3.png", ImageFormat.Png);
                     break;
             }
         }
@@ -539,6 +539,50 @@ namespace ProjEncontraPlaca
             
             
             return 0;
+        }
+
+        public static int FiltrarListaPontosCaracteres(ref List<Point> pontosIniciais, ref List<Point> pontosFinais)
+        {
+            // Tolerância para verificar se os pontos estão na mesma linha (em pixels)
+            const int toleranciaY = 3;
+
+            // Lista temporária para armazenar os pontos filtrados
+            List<(Point inicial, Point final)> pontosFiltrados = new List<(Point inicial, Point final)>();
+
+            // Itera por cada ponto inicial
+            for (int i = 0; i < pontosIniciais.Count; i++)
+            {
+                // Conta quantos outros pontos estão alinhados com o ponto atual
+                int alinhadosPeloY = 0;
+
+                for (int j = 0; j < pontosIniciais.Count; j++)
+                {
+                    if (i == j) continue; // Ignora o mesmo ponto
+
+                    // Verifica alinhamento pelo eixo Y dentro da tolerância
+                    if (Math.Abs(pontosIniciais[i].Y - pontosIniciais[j].Y) <= toleranciaY)
+                    {
+                        alinhadosPeloY++;
+                    }
+                    else
+                    {
+                        alinhadosPeloY--;
+                    }
+                }
+
+                // Se o ponto atual tem pelo menos 1 alinhamento no eixo Y, ele é mantido
+                if (alinhadosPeloY >= 1 || pontosIniciais.Count == 1)
+                {
+                    pontosFiltrados.Add((pontosIniciais[i], pontosFinais[i]));
+                }
+            }
+
+            // Atualiza as listas originais com os pontos filtrados
+            pontosIniciais = pontosFiltrados.Select(p => p.inicial).ToList();
+            pontosFinais = pontosFiltrados.Select(p => p.final).ToList();
+
+            // Retorna a quantidade de pontos restantes
+            return pontosIniciais.Count;
         }
 
         public static void ReconheceCaracter(Bitmap imageBase, List<Point> pontosIniciais, List<Point> pontosFinais, int caso)
@@ -568,13 +612,13 @@ namespace ProjEncontraPlaca
                     Rectangle region = new Rectangle(x, y, width, height);
                     Bitmap subImagem = imageBase.Clone(region, imageBase.PixelFormat);
                     
-                    subImagem.Save("C:\\Users\\Pedro Filitto\\Downloads\\Caracteres\\Caractere" + i + ".png", ImageFormat.Png);
+                    subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Caracteres\\Caractere" + i + ".png", ImageFormat.Png);
                     
                     otsu.ConvertToGrayDMA(subImagem);
                     int otsuThreshold = otsu.getOtsuThreshold(subImagem);
                     otsu.threshold(subImagem, otsuThreshold);
                     
-                    subImagem.Save("C:\\Users\\Pedro Filitto\\Downloads\\Caracteres\\CaractereOtsu" + i + ".png", ImageFormat.Png);
+                    subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Caracteres\\CaractereOtsu" + i + ".png", ImageFormat.Png);
 
                     if (i < 3)
                     {
@@ -659,7 +703,7 @@ namespace ProjEncontraPlaca
         }
 
         //sem acesso direto a memoria
-        public static void threshold(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
+        public static void Threshold(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
         {
             int width = imageBitmapSrc.Width;
             int height = imageBitmapSrc.Height;

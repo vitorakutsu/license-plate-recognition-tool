@@ -62,11 +62,11 @@ namespace ProjEncontraPlaca
                 StreamWriter arq = new StreamWriter(nome_arq);
 
                 Bitmap imageBitmap = (Bitmap)img.Clone();
-                Filtros.threshold((Bitmap)img, imageBitmap);
+                Filtros.Threshold((Bitmap)img, imageBitmap);
                 Bitmap imagePB = (Bitmap)imageBitmap.Clone();
 
                 Bitmap imageBitmapDest = new Bitmap(img.Width, img.Height);
-                Filtros.segmentar8conectado(imageBitmap, imageBitmapDest, listaPini, listaPfim);
+                Filtros.Segmenta8Conectado(imageBitmap, imageBitmapDest, listaPini, listaPfim);
 
                 for (int i = 0; i < listaPini.Count; i++)
                 {
@@ -207,7 +207,7 @@ namespace ProjEncontraPlaca
         {
             //reamostrar a imagem na grade
             Bitmap img_res = new Bitmap(img, new Size(largura, altura));
-            Filtros.threshold((Bitmap)img_res, img_res);
+            Filtros.Threshold((Bitmap)img_res, img_res);
 
             String transicao = String.Empty;
             bool flag = true;

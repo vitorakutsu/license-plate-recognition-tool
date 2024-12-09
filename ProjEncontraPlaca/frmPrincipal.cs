@@ -52,7 +52,7 @@ namespace ProjEncontraPlaca
         {
             imageBitmap = (Bitmap)image.Clone();
             Bitmap imgDest = (Bitmap)image.Clone();
-            Filtros.encontra_placa(imageBitmap, imgDest);
+            Filtros.EncontraPlaca(imageBitmap, imgDest);
 
             pictBoxImg.Image = imgDest;
         }
@@ -65,7 +65,7 @@ namespace ProjEncontraPlaca
             
             Image img = Image.FromFile(@"..\..\..\H.png");
             Bitmap img_dig = new Bitmap(img.Width, img.Height);
-            Filtros.threshold((Bitmap)img, img_dig);
+            Filtros.Threshold((Bitmap)img, img_dig);
 
             String transicao = cl_letras.retornaTransicaoHorizontal(img_dig);
             Console.WriteLine(cl_letras.reconheceCaractereTransicao_2pixels(transicao));
@@ -73,7 +73,7 @@ namespace ProjEncontraPlaca
             //testando o reconhecimento dos numeros
             img = Image.FromFile(@"..\..\..\7.png");
             img_dig = new Bitmap(img.Width, img.Height);
-            Filtros.threshold((Bitmap)img, img_dig);
+            Filtros.Threshold((Bitmap)img, img_dig);
 
             transicao = cl_numeros.retornaTransicaoHorizontal(img_dig);
             Console.WriteLine(cl_numeros.reconheceCaractereTransicao_2pixels(transicao));
