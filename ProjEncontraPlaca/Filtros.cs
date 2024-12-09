@@ -161,10 +161,11 @@ namespace ProjEncontraPlaca
         public static void AplicarMascaraDeslizante(Bitmap placaRegiao, Bitmap imageBitmapDest, Otsu otsu, Rectangle region, ref int cont, List<Point> listaPontosInicioParaFiltrar, List<Point> listaPontosFinalParaFiltrar)
         {
             int larguraMascara = 240;
+            bool ok = false;
 
             List<(Bitmap image, int cont)> melhores = new List<(Bitmap image, int cont)>();
 
-            for (int x = 0; x <= placaRegiao.Width - larguraMascara; x += 10)
+            for (int x = 0; x <= placaRegiao.Width - larguraMascara && !ok; x += 10)
             {
                 cont = 0;
                 listaPontosInicioParaFiltrar.Clear();
@@ -215,7 +216,7 @@ namespace ProjEncontraPlaca
                 subImagem.Dispose();
 
                 if (cont >= 7)
-                    return;
+                    ok = true;
             }
 
             melhores.Sort((a, b) => b.cont.CompareTo(a.cont));
@@ -229,7 +230,9 @@ namespace ProjEncontraPlaca
             listaPontosInicioParaFiltrar.Clear();
             listaPontosFinalParaFiltrar.Clear();
 
-            if (cont < 7)
+            ok = false;
+
+            if (cont < 7 && !ok)
             {
                 foreach (var melhor in melhores)
                 {
@@ -281,7 +284,7 @@ namespace ProjEncontraPlaca
                         subImagemAltura.Dispose();
 
                         if (cont >= 7) // Parar se todos os caracteres forem encontrados
-                            return;
+                            ok = true;
                     }
                 }
             }
@@ -547,20 +550,19 @@ namespace ProjEncontraPlaca
 
                 for (int j = 0; j < pontosIniciais.Count; j++)
                 {
-                    if (i == j) continue; // Ignora o mesmo ponto
-
-                    // Verifica alinhamento pelo eixo Y dentro da tolerância
-                    if (Math.Abs(pontosIniciais[i].Y - pontosIniciais[j].Y) <= toleranciaY)
+                    if (i != j)
                     {
-                        alinhadosPeloY++;
-                    }
-                    else
-                    {
-                        alinhadosPeloY--;
+                        if (Math.Abs(pontosIniciais[i].Y - pontosIniciais[j].Y) <= toleranciaY)
+                        {
+                            alinhadosPeloY++;
+                        }
+                        else
+                        {
+                            alinhadosPeloY--;
+                        }
                     }
                 }
-
-                // Se o ponto atual tem pelo menos 1 alinhamento no eixo Y, ele é mantido
+                
                 if (alinhadosPeloY >= 1 || pontosIniciais.Count == 1)
                 {
                     pontosFiltrados.Add((pontosIniciais[i], pontosFinais[i]));
