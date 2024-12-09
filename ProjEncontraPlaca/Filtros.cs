@@ -6,6 +6,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Threading;
 
 namespace ProjEncontraPlaca
 {
@@ -116,7 +117,7 @@ namespace ProjEncontraPlaca
                 menor.Y--;
             if (maior.Y < imageBitmapSrc.Height - 1)
                 maior.Y++;
-            DesenhaRetangulo(imageBitmapDest, menor, maior, Color.FromArgb(255, 0, 0));
+            //DesenhaRetangulo(imageBitmapDest, menor, maior, Color.FromArgb(255, 0, 0));
             listaPini.Add(menor);
             listaPfim.Add(maior);
         }
@@ -175,8 +176,6 @@ namespace ProjEncontraPlaca
                 Bitmap subImagem = placaRegiao.Clone(mascara, placaRegiao.PixelFormat);
                 Bitmap melhor = new Bitmap(subImagem);
 
-                subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Placas\\RegiaoPlaca" + x + ".png", ImageFormat.Png);
-
                 otsu.ConvertToGrayDMA(subImagem);
                 int otsuThreshold = otsu.getOtsuThreshold(subImagem);
                 otsu.threshold(subImagem, otsuThreshold);
@@ -221,24 +220,18 @@ namespace ProjEncontraPlaca
 
             melhores.Sort((a, b) => b.cont.CompareTo(a.cont));
             int i = 0;
-            foreach (var teste in melhores)
-            {
-                teste.image.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Melhores\\Melhores" + i + " .png", ImageFormat.Png);
-                i++;
-            }
-            
-            listaPontosInicioParaFiltrar.Clear();
-            listaPontosFinalParaFiltrar.Clear();
-
+      
             ok = false;
 
-            if (cont < 7 && !ok)
+            if (cont < 7)
             {
+                listaPontosInicioParaFiltrar.Clear();
+                listaPontosFinalParaFiltrar.Clear();
                 foreach (var melhor in melhores)
                 {
                     Bitmap melhorImagem = melhor.image;
                     int alturaBase = 30;
-                    for (int y = 0; y <= placaRegiao.Height - alturaBase; y += 5) // Incremento de 1
+                    for (int y = 0; y <= placaRegiao.Height - alturaBase && !ok; y += 5) // Incremento de 1
                     {
                         cont = 0;
                         listaPontosInicioParaFiltrar.Clear();
@@ -247,8 +240,6 @@ namespace ProjEncontraPlaca
                         int alturaReal = Math.Min(alturaBase, melhorImagem.Height - y);
                         Rectangle mascaraAltura = new Rectangle(0, y, melhorImagem.Width, alturaReal);
                         Bitmap subImagemAltura = melhorImagem.Clone(mascaraAltura, melhorImagem.PixelFormat);
-
-                        subImagemAltura.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Altura\\altura" + y + ".png", ImageFormat.Png);
 
                         otsu.ConvertToGrayDMA(subImagemAltura);
                         int otsuThreshold = otsu.getOtsuThreshold(subImagemAltura);
@@ -264,7 +255,7 @@ namespace ProjEncontraPlaca
                             int altura = listaPfimAltura[listaPiniAltura.IndexOf(ini)].Y - ini.Y;
                             int largura = listaPfimAltura[listaPiniAltura.IndexOf(ini)].X - ini.X;
 
-                            if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                            if (altura > 15 && altura < 27 && largura > 3 && largura < 39)
                             {
                                 cont++;
                                 
@@ -372,14 +363,10 @@ namespace ProjEncontraPlaca
                                     Rectangle region = new Rectangle(x, y, width, height);
                                     Bitmap placaRegiao = imageBitmapSrc.Clone(region, imageBitmapSrc.PixelFormat);
 
-                                    placaRegiao.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Regioes\\RegiaoPlaca.png", ImageFormat.Png);
-
                                     // Aplica Otsu e segmentação na região da placa
                                     otsu.ConvertToGrayDMA(placaRegiao);
                                     otsuThreshold = otsu.getOtsuThreshold(placaRegiao);
                                     otsu.threshold(placaRegiao, otsuThreshold);
-
-                                    placaRegiao.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Regioes\\RegiaoPlacaOtsu.png", ImageFormat.Png);
 
                                     placaRegiaoDilatada = (Bitmap)placaRegiao.Clone();
 
@@ -400,7 +387,6 @@ namespace ProjEncontraPlaca
 
                                             Filtros.DesenhaRetangulo(placaRegiaoDilatada, listaPini[i], listaPfim[i], Color.Green);
 
-                                            placaRegiaoDilatada.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Regioes\\RegiaoPlacaFiltrada.png", ImageFormat.Png);
 
                                             using (Graphics g = Graphics.FromImage(imageBitmapDest))
                                             {
@@ -455,8 +441,6 @@ namespace ProjEncontraPlaca
                                 Bitmap subImagemClone = (Bitmap)subImagem.Clone();
                                 
                                 Segmenta8Conectado(subImagem, subImagemClone, subListaPini, subListaPfim);
-                                
-                                subImagemClone.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Regioes\\SubImagem" + i +".png", ImageFormat.Png);
                                 
                                 for (int j = 0; j < subListaPini.Count; j++)
                                 {
@@ -514,27 +498,23 @@ namespace ProjEncontraPlaca
             {
                 case 0:
                     ReconheceCaracter(imageBitmapDest, _listaPini, _listaPfim, caso);
-                    imageBitmapDest.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaSegmentadaCaso0.png", ImageFormat.Png);
                     break;
                 case 1:
                     ReconheceCaracter(placaRegiaoDilatada, listaPontosInicioParaFiltrar, listaPontosFinalParaFiltrar, caso);
-                    placaRegiaoDilatada.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaSegmentadaCaso1.png", ImageFormat.Png);
                     break;
                 case 2:
                     placaJanelaDeslizante =
                         (Bitmap)Image.FromFile("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Placas\\MelhorPlaca.png");
                     ReconheceCaracter(placaJanelaDeslizante, listaPontosInicioMascaraDeslizante,
                         listaPontosFinalMascaraDeslizante, caso);
-                    placaJanelaDeslizante.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaSegmentadaCaso2.png", ImageFormat.Png);
                     break;
                 case 3:
                     ReconheceCaracter(subImagem, listaPontosInicioParaFiltrar, listaPontosFinalParaFiltrar, caso);
-                    subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaSegmentadaCaso3.png", ImageFormat.Png);
                     break;
             }
         }
 
-        public static int FiltrarListaPontosCaracteres(ref List<Point> pontosIniciais, ref List<Point> pontosFinais)
+        public static void FiltrarListaPontosCaracteres(ref List<Point> pontosIniciais, ref List<Point> pontosFinais)
         {
             // Tolerância para verificar se os pontos estão na mesma linha (em pixels)
             const int toleranciaY = 3;
@@ -572,58 +552,69 @@ namespace ProjEncontraPlaca
             // Atualiza as listas originais com os pontos filtrados
             pontosIniciais = pontosFiltrados.Select(p => p.inicial).ToList();
             pontosFinais = pontosFiltrados.Select(p => p.final).ToList();
-
-            // Retorna a quantidade de pontos restantes
-            return pontosIniciais.Count;
         }
 
         public static void ReconheceCaracter(Bitmap imageBase, List<Point> pontosIniciais, List<Point> pontosFinais, int caso)
         {
-            if (caso == 0)
-            {
-                //FiltrarListaPontosCaracteres(pontosIniciais, pontosFinais);
-            }
-                
-            Otsu otsu = new Otsu();
             
+            if(pontosIniciais.Count() > 7)
+            {
+                FiltrarListaPontosCaracteres(ref pontosIniciais, ref pontosFinais);
+            }
+            Otsu otsu = new Otsu();
+
             ClassificacaoCaracteres cl_numeros = new ClassificacaoCaracteres(30, 40, 1, 'S');
             ClassificacaoCaracteres cl_letras = new ClassificacaoCaracteres(30, 40, 2, 'S');
-            
+
+            Console.WriteLine(new string('\n', 50)); // Limpa o console ao iniciar
+            Console.WriteLine("Reconhecendo a placa");
+
+            // Simula uma animação de progresso
+            for (int progress = 0; progress < 5; progress++)
+            {
+                Console.Write(".");
+                Thread.Sleep(500); // Aguarda 500ms para criar o efeito de carregamento
+            }
+            Console.WriteLine("\n");
+
             for (int i = 0; i < pontosIniciais.Count; i++)
             {
                 Point pontoInicial = pontosIniciais[i];
                 Point pontoFinal = pontosFinais[i];
-                
+
                 int x = Math.Max(0, pontoInicial.X);
                 int y = Math.Max(0, pontoInicial.Y);
                 int width = Math.Min(imageBase.Width - x, pontoFinal.X - pontoInicial.X + 1);
                 int height = Math.Min(imageBase.Height - y, pontoFinal.Y - pontoInicial.Y + 1);
-                
+
                 if (width > 0 && height > 0)
                 {
                     Rectangle region = new Rectangle(x, y, width, height);
                     Bitmap subImagem = imageBase.Clone(region, imageBase.PixelFormat);
-                    
+
                     subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Caracteres\\Caractere" + i + ".png", ImageFormat.Png);
-                    
+
                     otsu.ConvertToGrayDMA(subImagem);
                     int otsuThreshold = otsu.getOtsuThreshold(subImagem);
                     otsu.threshold(subImagem, otsuThreshold);
-                    
+
                     subImagem.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Caracteres\\CaractereOtsu" + i + ".png", ImageFormat.Png);
 
                     if (i < 3)
                     {
                         String transicao = cl_letras.retornaTransicaoHorizontal(subImagem);
-                        Console.WriteLine(cl_letras.reconheceCaractereTransicao_2pixels(transicao));
+                        Console.Write(cl_letras.reconheceCaractereTransicao_2pixels(transicao));
                     }
                     else
                     {
+                        if (i == 3) Console.Write("-");
                         String transicao = cl_numeros.retornaTransicaoHorizontal(subImagem);
-                        Console.WriteLine(cl_numeros.reconheceCaractereTransicao_2pixels(transicao));
+                        Console.Write(cl_numeros.reconheceCaractereTransicao_2pixels(transicao));
                     }
                 }
             }
+
+            Console.WriteLine("\nReconhecimento concluído!");
         }
 
         public static void DilatarImagem(Bitmap image, Bitmap imageDest, ElementoEstruturante elementoEstruturante)
@@ -694,7 +685,6 @@ namespace ProjEncontraPlaca
             }
         }
 
-        //sem acesso direto a memoria
         public static void Threshold(Bitmap imageBitmapSrc, Bitmap imageBitmapDest)
         {
             int width = imageBitmapSrc.Width;
