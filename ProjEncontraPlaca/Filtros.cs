@@ -212,7 +212,6 @@ namespace ProjEncontraPlaca
             return (double)cont / pixels >= 0.6;
         }
 
-
         public static void AplicarMascaraDeslizante(Bitmap placaRegiao, Bitmap imageBitmapDest, Otsu otsu, Rectangle region, ref int cont, List<Point> listaPontosInicioParaFiltrar, List<Point> listaPontosFinalParaFiltrar)
         {
             int larguraMascara = 235;
@@ -273,7 +272,6 @@ namespace ProjEncontraPlaca
             }
 
             melhores.Sort((a, b) => b.cont.CompareTo(a.cont));
-            int i = 0;
       
             ok = false;
 
@@ -398,6 +396,12 @@ namespace ProjEncontraPlaca
                             Filtros.DesenhaRetangulo(imageBitmapDest, listaPini[i], listaPfim[i], Color.Green);
                             cont++;
                         }
+                    }
+
+                    if(cont > 7)
+                    {
+                        FiltrarListaPontosCaracteres(ref listaPontosInicioParaFiltrar, ref listaPontosFinalParaFiltrar);
+                        cont = listaPontosInicioParaFiltrar.Count();
                     }
                 }
                 else
