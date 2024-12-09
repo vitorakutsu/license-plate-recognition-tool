@@ -531,16 +531,6 @@ namespace ProjEncontraPlaca
             }
         }
 
-        public static int FiltraListaPontosCaracteres(List<Point> pontosIniciais, List<Point> pontosFinais)
-        {
-            //Preciso filtrar aqui os pontos da minha imagem que possivelmente nao fazem parte da placa, ou seja, que estao fora da placa
-            
-            
-            
-            
-            return 0;
-        }
-
         public static int FiltrarListaPontosCaracteres(ref List<Point> pontosIniciais, ref List<Point> pontosFinais)
         {
             // Tolerância para verificar se os pontos estão na mesma linha (em pixels)
