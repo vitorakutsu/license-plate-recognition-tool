@@ -145,6 +145,34 @@ namespace ProjEncontraPlaca
             }
         }
 
+        public static void ConverterParaPretoEBranco(Bitmap image, Bitmap convertedImage)
+        {
+            int width = image.Width;
+            int height = image.Height;
+            int r, g, b;
+            int gs;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color cor = image.GetPixel(x, y);
+
+                    r = cor.R;
+                    g = cor.G;
+                    b = cor.B;
+
+                    gs = (Int32)(r * 0.2990 + g * 0.5870 + b * 0.1140);
+                    byte bw = (byte)(gs < 200 ? 0 : 255);
+
+                    Color newcolor = Color.FromArgb(bw, bw, bw);
+
+                    convertedImage.SetPixel(x, y, newcolor);
+                }
+            }
+
+        }
+
         private static void DesenhaRetangulo(Bitmap imageBitmapDest, Point menor, Point maior, Color cor)
         {
             for (int x = menor.X; x <= maior.X; x++)
@@ -159,14 +187,40 @@ namespace ProjEncontraPlaca
             }
         }
 
+        private static bool ElementoPreto(Bitmap image, int x, int y, int x_final, int y_final)
+        {
+            int largura = x_final - x;
+            int altura = y_final - y;
+            if (largura <= 0 || altura <= 0)
+                throw new ArgumentException("As coordenadas fornecidas não formam uma área válida.");
+
+            int pixels = largura * altura;
+            int cont = 0;
+
+            for (int i = x; i < x_final; i++)
+            {
+                for (int j = y; j < y_final; j++)
+                {
+                    Color pixel = image.GetPixel(i, j);
+                    if (pixel.R < 200 && pixel.G < 200 && pixel.B < 200) // Pixel considerado preto
+                    {
+                        cont++;
+                    }
+                }
+            }
+
+            return (double)cont / pixels >= 0.6;
+        }
+
+
         public static void AplicarMascaraDeslizante(Bitmap placaRegiao, Bitmap imageBitmapDest, Otsu otsu, Rectangle region, ref int cont, List<Point> listaPontosInicioParaFiltrar, List<Point> listaPontosFinalParaFiltrar)
         {
-            int larguraMascara = 240;
+            int larguraMascara = 235;
             bool ok = false;
 
-            List<(Bitmap image, int cont)> melhores = new List<(Bitmap image, int cont)>();
+            List<(Bitmap image, int cont, int width)> melhores = new List<(Bitmap image, int cont, int width)>();
 
-            for (int x = 0; x <= placaRegiao.Width - larguraMascara && !ok; x += 10)
+            for (int x = 0; x <= placaRegiao.Width - larguraMascara && !ok; x += 5)
             {
                 cont = 0;
                 listaPontosInicioParaFiltrar.Clear();
@@ -190,7 +244,7 @@ namespace ProjEncontraPlaca
                     int altura = listaPfimMascara[listaPiniMascara.IndexOf(ini)].Y - ini.Y;
                     int largura = listaPfimMascara[listaPiniMascara.IndexOf(ini)].X - ini.X;
 
-                    if (altura > 15 && altura < 27 && largura > 3 && largura < 35)
+                    if (altura > 15 && altura < 27 && largura > 3 && largura < 39)
                     {
                         cont++;
                         
@@ -210,7 +264,7 @@ namespace ProjEncontraPlaca
                     }
                 }
 
-                melhores.Add((melhor, cont));
+                melhores.Add((melhor, cont, x));
 
                 subImagem.Dispose();
 
@@ -223,6 +277,13 @@ namespace ProjEncontraPlaca
       
             ok = false;
 
+            int index = 0;
+            foreach(var melhor in melhores)
+            {
+                melhor.image.Save($"C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Melhores\\Melhores{index}.png", ImageFormat.Png);
+                index++;
+            }
+
             if (cont < 7)
             {
                 listaPontosInicioParaFiltrar.Clear();
@@ -230,8 +291,8 @@ namespace ProjEncontraPlaca
                 foreach (var melhor in melhores)
                 {
                     Bitmap melhorImagem = melhor.image;
-                    int alturaBase = 30;
-                    for (int y = 0; y <= placaRegiao.Height - alturaBase && !ok; y += 5) // Incremento de 1
+                    int alturaBase = 25;
+                    for (int y = 0; y <= placaRegiao.Height - alturaBase && !ok; y += 3) // Incremento de 1
                     {
                         cont = 0;
                         listaPontosInicioParaFiltrar.Clear();
@@ -239,11 +300,13 @@ namespace ProjEncontraPlaca
                         
                         int alturaReal = Math.Min(alturaBase, melhorImagem.Height - y);
                         Rectangle mascaraAltura = new Rectangle(0, y, melhorImagem.Width, alturaReal);
-                        Bitmap subImagemAltura = melhorImagem.Clone(mascaraAltura, melhorImagem.PixelFormat);
+                        Bitmap subImagemAltura = melhorImagem.Clone(mascaraAltura, placaRegiao.PixelFormat);
 
                         otsu.ConvertToGrayDMA(subImagemAltura);
                         int otsuThreshold = otsu.getOtsuThreshold(subImagemAltura);
                         otsu.threshold(subImagemAltura, otsuThreshold);
+
+                        subImagemAltura.Save($"C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PorAltura\\Particao{y}.png", ImageFormat.Png);
 
                         List<Point> listaPiniAltura = new List<Point>();
                         List<Point> listaPfimAltura = new List<Point>();
@@ -255,7 +318,7 @@ namespace ProjEncontraPlaca
                             int altura = listaPfimAltura[listaPiniAltura.IndexOf(ini)].Y - ini.Y;
                             int largura = listaPfimAltura[listaPiniAltura.IndexOf(ini)].X - ini.X;
 
-                            if (altura > 15 && altura < 27 && largura > 3 && largura < 39)
+                            if (altura > 15 && altura < 27 && largura > 3 && largura < 39 && !ElementoPreto(subImagemAltura, ini.X, ini.Y, listaPfimAltura[listaPiniAltura.IndexOf(ini)].X, listaPfimAltura[listaPiniAltura.IndexOf(ini)].Y))
                             {
                                 cont++;
                                 
@@ -264,9 +327,12 @@ namespace ProjEncontraPlaca
 
                                 Filtros.DesenhaRetangulo(subImagemAltura, ini, listaPfimAltura[listaPiniAltura.IndexOf(ini)], Color.Green);
 
+                                if (cont == 7)
+                                    subImagemAltura.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\Placas\\MelhorPlaca.png", ImageFormat.Png);
+
                                 using (Graphics g = Graphics.FromImage(imageBitmapDest))
                                 {
-                                    Rectangle targetRegion = new Rectangle(region.X, y, subImagemAltura.Width, subImagemAltura.Height);
+                                    Rectangle targetRegion = new Rectangle(melhor.width, region.Y, subImagemAltura.Width, subImagemAltura.Height);
                                     g.DrawImage(subImagemAltura, targetRegion);
                                 }
                             }
@@ -274,8 +340,7 @@ namespace ProjEncontraPlaca
 
                         subImagemAltura.Dispose();
 
-                        if (cont >= 7) // Parar se todos os caracteres forem encontrados
-                            ok = true;
+                        if (cont >= 7) { ok = true; }
                     }
                 }
             }
@@ -375,6 +440,8 @@ namespace ProjEncontraPlaca
 
                                     Filtros.Segmenta8Conectado(placaRegiaoDilatada, placaRegiaoDilatada, listaPini, listaPfim);
 
+                                    placaRegiaoDilatada.Save("C:\\Users\\VITOR\\Documents\\PlacasDeCarros\\PlacaRegiaoDilatada.png", ImageFormat.Png);
+
                                     for (int i = 0; i < listaPini.Count; i++)
                                     {
                                         altura = listaPfim[i].Y - listaPini[i].Y;
@@ -387,7 +454,6 @@ namespace ProjEncontraPlaca
 
                                             Filtros.DesenhaRetangulo(placaRegiaoDilatada, listaPini[i], listaPfim[i], Color.Green);
 
-
                                             using (Graphics g = Graphics.FromImage(imageBitmapDest))
                                             {
                                                 Rectangle targetRegion = new Rectangle(region.X, region.Y, placaRegiaoDilatada.Width, placaRegiaoDilatada.Height);
@@ -397,6 +463,9 @@ namespace ProjEncontraPlaca
                                             cont++;
                                         }
                                     }
+
+                                    FiltrarListaPontosCaracteres(ref listaPontosInicioParaFiltrar, ref listaPontosFinalParaFiltrar);
+                                    cont = listaPontosInicioParaFiltrar.Count();
 
                                     // Fallback para aplicar a máscara deslizante
                                     if (cont < 7)
@@ -416,7 +485,6 @@ namespace ProjEncontraPlaca
                                 }
                             }
                         }
-
                         else
                         {
                             caso = 3;
